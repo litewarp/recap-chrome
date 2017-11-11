@@ -108,13 +108,17 @@ let PACER = {
   },
 
   // Returns the document ID for a document view page or single-document page.
-  getDocumentIdFromUrl: function (url) {
+  getDocumentIdFromUrl: function (url, sanitize=true) {
     let match = (url || '').match(/\/doc1\/(\d+)$/);
     if (match) {
-      // PACER sites use the fourth digit of the pacer_doc_id to flag whether
-      // the user has been shown a receipt page.  We don't care about that, so
-      // we always set the fourth digit to 0 when getting a doc ID.
-      return match[1].slice(0, 3) + '0' + match[1].slice(4);
+      if (sanitize) {
+        // PACER sites use the fourth digit of the pacer_doc_id to flag whether
+        // the user has been shown a receipt page.  We don't care about that, so
+        // we always set the fourth digit to 0 when getting a doc ID.
+        return match[1].slice(0, 3) + '0' + match[1].slice(4);
+      } else {
+        return match[1];
+      }
     }
   },
 
@@ -131,6 +135,18 @@ let PACER = {
     });
     let pacerCookie = cookies['PacerUser'] || cookies['PacerSession'];
     return !!(pacerCookie && !pacerCookie.match(/unvalidated/));
+  },
+
+  receiptsDisabled: function (cookieString){
+    // There's an arcane setting in your PACER account that disables the receipt
+    // page. We gotta do the right thing regardless of this setting.
+    let cookies = {};
+    cookieString.replace(/\s*([^=;]+)=([^;]*)/g, function (match, name, value) {
+      cookies[name.trim()] = value.trim();
+    });
+    if ('PacerPref' in cookies){
+      return !!(cookies['PacerPref'].match(/receipt=N/))
+    }
   },
 
   // Returns true if the given court identifier is for an appellate court.

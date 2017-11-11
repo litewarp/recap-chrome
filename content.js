@@ -39,6 +39,12 @@ if (PACER.hasPacerCookie(document.cookie)) {
   // Check every link in the document to see if there is a free RECAP document
   // available. If there is, put a link with a RECAP icon.
   content_delegate.attachRecapLinkToEligibleDocs();
+
+  if (PACER.receiptsDisabled(document.cookie)){
+    // The user has receipts disabled. Attach onclick events to the documents,
+    // and make it all work anyway.
+    content_delegate.handleNoReceipts();
+  }
 } else {
   console.info(`Taking no actions because not logged in.`);
 }

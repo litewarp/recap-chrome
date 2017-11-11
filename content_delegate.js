@@ -188,6 +188,34 @@ ContentDelegate.prototype.handleSingleDocumentPageCheck = function() {
   this.recap.getAvailabilityForDocuments([this.pacer_doc_id], cl_court, callback);
 };
 
+ContentDelegate.prototype.getAndShowPdf = function(url, data, previousPageHtml,
+    document_number, attachment_number, docket_number){
+  httpRequest(url, data, function (type, ab, xhr) {
+    console.info('Successfully fetched the PDF button form: ' + xhr.statusText);
+    var blob = new Blob([new Uint8Array(ab)], {type: type});
+    // If we got a PDF, we wrap it in a simple HTML page.  This lets us treat
+    // both cases uniformly: either way we have an HTML page with an <iframe>
+    // in it, which is handled by showPdfPage.
+    if (type === 'application/pdf') {
+      // canb and ca9 return PDFs and trigger this code path.
+      var html = '<style>body { margin: 0; } iframe { border: none; }' +
+        '</style><iframe src="' + URL.createObjectURL(blob) +
+        '" width="100%" height="100%"></iframe>';
+      this.showPdfPage(document.documentElement, html, previousPageHtml,
+        document_number, attachment_number, docket_number);
+    } else {
+      // dcd (and presumably others) trigger this code path.
+      var reader = new FileReader();
+      reader.onload = function () {
+        this.showPdfPage(
+          document.documentElement, reader.result, previousPageHtml,
+          document_number, attachment_number, docket_number);
+      }.bind(this);
+      reader.readAsText(blob);  // convert blob to HTML text
+    }
+  }.bind(this));
+};
+
 ContentDelegate.prototype.onDocumentViewSubmit = function (event) {
   // Save a copy of the page source, altered so that the "View Document"
   // button goes forward in the history instead of resubmitting the form.
@@ -211,31 +239,55 @@ ContentDelegate.prototype.onDocumentViewSubmit = function (event) {
   $('body').css('cursor', 'wait');
   let form = document.getElementById(event.data.id);
   let data = new FormData(form);
-  httpRequest(form.action, data, function (type, ab, xhr) {
-    console.info('Successfully submitted RECAP "View" button form: '+xhr.statusText);
-    var blob = new Blob([new Uint8Array(ab)], {type: type});
-    // If we got a PDF, we wrap it in a simple HTML page.  This lets us treat
-    // both cases uniformly: either way we have an HTML page with an <iframe>
-    // in it, which is handled by showPdfPage.
-    if (type === 'application/pdf') {
-      // canb and ca9 return PDFs and trigger this code path.
-      var html = '<style>body { margin: 0; } iframe { border: none; }' +
-                 '</style><iframe src="' + URL.createObjectURL(blob) +
-                 '" width="100%" height="100%"></iframe>';
-      this.showPdfPage(document.documentElement, html, previousPageHtml,
-        document_number, attachment_number, docket_number);
-    } else {
-      // dcd (and presumably others) trigger this code path.
-      var reader = new FileReader();
-      reader.onload = function() {
-          this.showPdfPage(
-            document.documentElement, reader.result, previousPageHtml,
-            document_number, attachment_number, docket_number);
-      }.bind(this);
-      reader.readAsText(blob);  // convert blob to HTML text
-    }
-  }.bind(this));
+  this.getAndShowPdf(form.action, data, previousPageHtml, document_number,
+    attachment_number, docket_number)
 };
+
+
+// If receipts are disabled, we need to intercept the click events, get the PDF
+// and serve it up. This is based largely off the logic that happens when you
+// would normally click the View button on the receipt page.
+ContentDelegate.prototype.handleNoReceipts = function () {
+  let linkCount = this.pacer_doc_ids.length;
+  console.info(`Receipts are disabled. Attaching on click events to all ` +
+    `eligible documents (${linkCount} found)`);
+  if (linkCount === 0) {
+    return;
+  }
+  let clickFunction = function(event){
+    console.info(`Running onclick method for document (receipts are off)`);
+    let goDlsString = event.target.getAttribute('onclick');
+    let argumentRegex = /'(.*?)'/g;
+    let goDlsArguments = [];
+    let match = argumentRegex.exec(goDlsString);
+    while (match != null){
+      goDlsArguments.push(match[1]);
+      match = argumentRegex.exec(goDlsString);
+    }
+    let url = goDlsArguments[0];
+    let pacer_doc_id = PACER.getDocumentIdFromUrl(url, sanitize=false);
+    // If the fourth digit is a zero, we need to show the attachments page.
+    // Therefore, do nothing. This isn't a link to a PDF.
+    if (pacer_doc_id[3] === '0'){
+      return;
+    }
+
+    // This link leads to a PDF. Get it.
+    let data = new FormData();
+    data.append('caseid', goDlsArguments[1]);
+    data.append('de_seq_num', goDlsArguments[2]);
+    data.append('got_receipt', goDlsArguments[3]);
+    data.append('pdf_header', goDlsArguments[4]);
+    data.append('pdf_toggle_possible', goDlsArguments[5]);
+    this.getAndShowPdf(url, data, previousPageHtml, document_number,
+      attachment_number, docket_number);
+  };
+  for (let i = 0; i < this.links.length; i++) {
+    this.links[i].addEventListener('click', clickFunction)
+  }
+
+};
+
 
 // Given the HTML for a page with an <iframe> in it, downloads the PDF document
 // in the iframe, displays it in the browser, and also uploads the PDF document
@@ -400,6 +452,12 @@ ContentDelegate.prototype.attachRecapLinkToEligibleDocs = function() {
   // Ask the server whether any of these documents are available from RECAP.
   this.recap.getAvailabilityForDocuments(this.pacer_doc_ids, this.court,
                                          $.proxy(function (api_results) {
+    if (!api_results){
+      // Something went wrong. The results are falsy/null.
+      console.warn(`api_results returned by availability API query returned ` +
+                   `falsy (probably null)`);
+      return;
+    }
     console.info(`Got results from API. Running callback on API results to ` +
                  `attach links and icons where appropriate.`);
     for (let i = 0; i < this.links.length; i++) {
