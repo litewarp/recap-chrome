@@ -34,6 +34,10 @@ if (PACER.hasPacerCookie(document.cookie)) {
   // creates a <form> element and calls submit() on it, so we hook into submit().
   content_delegate.handleSingleDocumentPageView();
 
+  // If this page offers a zip of the content, get the zip, serve it to the user
+  // then upload to to RECAP.
+  content_delegate.handleMultidocsPageView();
+
   // Check every link in the document to see if there is a free RECAP document
   // available. If there is, put a link with a RECAP icon.
   content_delegate.attachRecapLinkToEligibleDocs();

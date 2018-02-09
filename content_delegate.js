@@ -431,6 +431,30 @@ ContentDelegate.prototype.handleSingleDocumentPageView = function() {
     'message', this.onDocumentViewSubmit.bind(this), false);
 };
 
+ContentDelegate.prototype.onDownloadZipClick = function (event) {
+  let docket_number = $.trim($('tr:contains(Case Number) td:nth(1)').text());
+  console.info("RECAP: Successfully reached zip download function.");
+};
+
+// If this is a receipt page for a zip of documents, intercept the zip download
+// share it with the user, and send it to RECAP.
+ContentDelegate.prototype.handleMultidocsPageView = function() {
+  if (!PACER.isMultidocPage(this.url, document)) {
+    return;
+  }
+  if (PACER.isAppellateCourt(this.court)) {
+    debug(4, "No zip support for appellate downloads yet");
+    return;
+  }
+
+  let download_buttons = $("input[value='Download Documents']");
+  let original_onclick = download_buttons[0].onclick;
+  download_buttons.removeAttr('onclick');
+  download_buttons.on('click', {
+    original_onclick: original_onclick
+  }, this.onDownloadZipClick.bind(this));
+};
+
 // Pop up a dialog offering the link to the free cached copy of the document,
 // or just go directly to the free document if popups are turned off.
 ContentDelegate.prototype.handleRecapLinkClick = function(window_obj, url) {

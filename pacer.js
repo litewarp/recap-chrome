@@ -66,6 +66,18 @@ let PACER = {
     return false;
   },
 
+  // Returns true if the given URL is where you can download a zip file.
+  // For CMECF District, something like:
+  // https://ecf.okwd.uscourts.gov/cgi-bin/show_multidocs.pl?caseid=100147&arr_de_seq_nums=8&magic_num=&pdf_header=&hdr=&pdf_toggle_possible=&zipit=1
+  isMultidocUrl: function(url) {
+    if (url.match(/\/cgi-bin\/show_multidocs/)) {
+      if (PACER.getCourtFromUrl(url)) {
+        return true;
+      }
+    }
+    return false;
+  },
+
   // Returns true if the URL is for docket query page.
   isDocketQueryUrl: function (url) {
     // The part after the "?" is all digits.
@@ -148,6 +160,15 @@ let PACER = {
                      (lastInput === 'View Document') ||
                      (lastInput === 'Accept Charges and Retrieve'));
     debug(4," lastInput "+lastInput);
+    return !!pageCheck;
+  },
+
+  // Returns true if this is a page for downloading zip files.
+  isMultidocPage: function (url, document) {
+    let inputs = document.getElementsByTagName('input');
+    let lastInputText = inputs.length && inputs[inputs.length - 1].value;
+    let pageCheck = (PACER.isMultidocUrl(url) &&
+                     lastInputText === 'Download Documents');
     return !!pageCheck;
   },
 
