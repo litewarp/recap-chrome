@@ -24,36 +24,19 @@
 //      Full Docket Options / Confirmation Page
 //        Full Docket
 //          Document Download Confirmation Page
-// .        Document show page
+//          Document show page
 //    Case Query Page
 
+// block multi-pdfs
+// handle advanced searching
+// autocheck pdf headers
+
+// appellate 
+
+
 class ApellateDelegate {
-  constructor({ tabId, url, path, court, pacerCaseId, pacerDocId, links}) {
+  constructor({ tabId }) {
     this.tabId = tabId;
-    this.url = url;
-    this.path = path;
-    this.court = court;
-    this.pacer_case_id = pacer_case_id;
-    if (pacer_doc_id) {
-      this.pacer_doc_id = pacer_doc_id;
-      this.pacer_doc_ids = [pacer_doc_id];
-    } else {
-      this.pacer_doc_ids = [];
-    }
-    this.links = links || [];
-  
-    this.notifier = importInstance(Notifier);
-    this.recap = importInstance(Recap);
-  
-    this.findAndStorePacerDocIds();
-  
-    this.restricted = this.checkRestrictions();
   }
-
-  findAndStorePacerIds() {
-
-  }
-
-  
-
+  identifyTargetPage() {}
 }
