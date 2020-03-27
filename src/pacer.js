@@ -220,6 +220,7 @@ let PACER = {
         // Grab the document ID from the form's onsubmit attribute
         let onsubmit = last_input.form.getAttribute('onsubmit');
         let goDLS = PACER.parseGoDLSFunction(onsubmit);
+        console.log(goDLS)
         return goDLS && PACER.getDocumentIdFromUrl(goDLS.hyperlink);
       }
     }
@@ -345,7 +346,7 @@ let PACER = {
     if (anchor) {
       const onclickString = anchor.attributes.onclick.value;
       // find single quote five digits single quote followed by closing paren
-      const caseId = onclickString.match(/\'\d{4,6}\'(?=\))/)[0];
+      const caseId = onclickString.match(/\'\d{4,6}\'/)[0];
       return caseId.replace(/\'/g,'');
     }
   },
@@ -368,9 +369,10 @@ let PACER = {
   
   getCaseIdFromAppellateSearchResults: function (anchors) {
     // only return caseid if between 4 and 6 non-broken digits (can modify)
-    const urls = anchors.find(anchor => anchor.href.match(/caseid=\d{4,6}/));
-    if (urls.length > 0) {
-      return urls[0].replace('caseid=');
+    const anchor = anchors.find(anchor => anchor.href.match(/caseid=\d{4,6}/));
+    if (!!anchor) {
+      const match = anchor.href.match(/caseid=\d{4,6}/)[0];
+      return match.replace('caseid=');
     }
   },
   // These are all the supported PACER court identifiers, together with their

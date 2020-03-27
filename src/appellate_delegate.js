@@ -69,18 +69,18 @@
 // appellate 
 
 class AppellateDelegate {
-  constructor({ tabId, court, links, pacerCaseId, pacerDocId }) {
+  constructor({ tabId, court, links, pacerDocId }) {
     this.tabId = tabId;
     this.court = court;
-    this.pacerCaseId = pacerCaseId;
-    this.targetPage = this.getTargetPage();
+    this.targetPage = this.setTargetPage();
 
     this.notifier = importInstance(Notifier);
     this.recap = importInstance(Recap);
-    this.links = links || []
+    this.links = links || [];
   }
-  // confirmed identifiers for 1st, 2nd Circuits
-  getTargetPage() {
+
+  // confirmed identifiers for 1st, 2nd, 3rd Circuits
+  setTargetPage() {
     // check the document head for a title
     const title = !!document.head.textContent
       ? document.head.querySelector('title').text.trim()
@@ -95,9 +95,9 @@ class AppellateDelegate {
     } else if (title === 'Case Query') {
       return 'caseQuery';
     } else if (title === 'Download Confirmation') {
-      return 'documentDownloadConfirmation';
+      return 'downloadConfirmation';
     } else if (title === 'Document') {
-      return 'multiDocumentDownload';
+      return 'attachmentMenu';
     } else if (title === 'Docket Report Filter') {
       return 'fullDocketSearch';
     } else if (title.match(/\d+-\d+\sDocket/)) {
@@ -116,72 +116,78 @@ class AppellateDelegate {
         return;
       }
     }
-  }
+  };
+  
+  // dispatch associated handler
   handleTargetPage(){
-    // punt if no cookie
-    if (!PACER.hasPacerCookie(document.cookie)) {
-      return;
-    }
-    switch(this.targetPage) {
-    case ('caseSearch'): 
-      this.handleCaseSearchPage();
-      break;
-    case ('advancedCaseSearch'): 
-      this.handleCaseSearchPage();
-      break;
-    case 'caseQuery': 
+    if (this.targetPage === 'caseQuery') {
       this.handleCaseQueryPage();
-      break;
-    case 'caseSearchResults': 
+
+    } else if (this.targetPage === 'caseSearchResults') {
       this.handleCaseSearchResultsPage();
-      break;
-    case 'documentDownloadConfirmation': 
-      this.handleDocumentDownloadConfirmationPage();
-      break;
-    case 'multiDocumentDownload': 
-      this.handleMultiDocumentDownloadPage();
-      break;
-    case 'fullDocketSearch': 
+
+    } else if (this.targetPage === 'downloadConfirmation') { 
+      this.handleDownloadConfirmationPage();
+
+    } else if (this.targetPage === 'attachmentMenu') {
+      this.handleAttachmentMenuPage();
+
+    } else if (this.targetPage === 'fullDocketSearch') { 
       this.handleFullDocketSearchPage();
-      break;
-    case ('fullDocket'): 
+    
+    } else if (this.targetPage === 'caseSearch' || this.targetPage === 'advancedCaseSearch') {
+      this.handleCaseSearchPage();
+
+    } else if (this.targetPage === 'fullDocket' || this.targetPage === 'shortDocket') {
       this.handleDocketPage();
-      break;
-    case ('shortDocket'): 
-      this.handleDocketPage();
-      break;
-    default:
+
+    } else {
       return;
     };
   };
 
   handleCaseSearchPage(){
-    console.log("handleCaseSearchPage")
+    console.log('handleCaseSearchPage')
     // store info
   };
 
-  handleCaseSearchResultsPage (){
+  handleCaseSearchResultsPage(){
+    console.log("handleCaseSearchResults")
     // store caseId in tabStorage
     // unsure if needed since caseId can be obtained from docket pages
     // this is probably cleaner
     const anchors = [...document.querySelectorAll('a')];
     const pacerCaseId = PACER.getCaseIdFromAppellateSearchResults(anchors);
     if (pacerCaseId){
-      updateTabStorage({ [this.tabId]: { caseId: pacerCaseId } })
+      updateTabStorage({ [this.tabId]: { caseId: pacerCaseId } });
     };
   };
 
-  handleCaseQueryPage(){
-    // set params for upload
+  async handleCaseQueryPage(){
+    console.log("handleCaseQuery")
+    // set pacerCaseId for pages down the line
     const inputs = [...document.querySelectorAll('input')];
+    const pacerCaseId = PACER.getCaseIdFromAppellateCaseQueryPage(inputs);
+    if (pacerCaseId) {
+      await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId }});
+    };
+    
+    // don't upload more than once per session
+    if (history.state && history.state.uploaded) { return; };
+    
+    // don't upload if the user disabled the option
+    const options = await getItemsFromStorage('options');
+    console.log(options);
+    if (options.recap_enabled === false) { return; };
+    
+    // set params for upload
     const params = {
-      // render the html as a string
+      pacerCaseId: pacerCaseId,
       htmlPage: document.documentElement.outerHTML,
       uploadType: 'CASE_QUERY',
       pacerCourt: this.court,
-      pacerCaseId: PACER.getCaseIdFromAppellateCaseQueryPage(inputs),
     };
-    // upload page through recap instance
+    
     this.recap.uploadAppellatePage(
       params,
       // send a callback for now to mimic contentDelegate
@@ -192,24 +198,66 @@ class AppellateDelegate {
           () => {}
         );
       }
-    )
+    );
   };
 
-  handleDocumentDownloadConfirmationPage() {
+  // TODO: add notification that multi aren't supported 
+  handleDownloadConfirmationPage() {
     console.log("handleDocumentDownloadConfirmationPage")
+
     // replace form action and 
     // add listener for button click
     // handle the download and push to docketDisplayPage
+    const inputs = [...document.querySelectorAll('input')];
+    const input = inputs.find(input => input.type === 'button' && input.value.includes('Accept'));
+   
+    const newInput = document.createElement('input');
+    newInput.setAttribute('type', 'button');
+    newInput.setAttribute('value', input.value);
+    newInput.addEventListener('click', () => window.postMessage(`{ url: ${document.URL} }`));
+
+    // we replace the onclick button with a listener and
+    // store the onclick method in a hidden element for the worker to use later
+    input.setAttribute('type', 'hidden');
+    input.setAttribute('id', 'originalLink');
+    input.insertAdjacentElement('beforebegin', newInput);
+    
+    window.addEventListener('message', this.onDocumentDownload.bind(this), false);
   };
 
-  handleMultiDocumentDownloadPage() {
-    console.log("handleMultiDocumentDownloadPage")
-    getItemsFromStorage(this.tabId).then(tabStorage => {
-      const pacerCaseId = tabStorage['caseId'] 
-      // add notification that multi aren't supported 
+  async handleAttachmentMenuPage() {
+    console.log("handleAttachmentMenuPage")
 
-      const attachmentPageHtml = document.documentElement.outerHTML;
-    });    
+    // check if this tab was opened by another and use that tabId
+    // to get the relevant tabStorage
+    const { openerTabId } = await checkForOpenerTabId();
+    const tabId = openerTabId ? openerTabId : this.tabId; 
+    const tabStorage = await getItemsFromStorage(tabId);
+
+    // don't upload more than once per session
+    if (history.state && history.state.uploaded) { return; };
+    
+    // don't upload if the user disabled the option
+    const options = await getItemsFromStorage('options');
+    if (options.recap_enabled === false) { return; };
+    
+    const params = {
+      pacerCourt: this.court,
+      pacerCaseId: tabStorage && tabStorage.caseId,
+      htmlPage: document.documentElement.outerHTML,
+      uploadType: 'ATTACHMENT_PAGE',
+    };
+    
+    this.recap.uploadAppellatePage(
+      params,
+      (response) => {
+        history.replaceState({ uploaded: true }, '');
+        this.notifier.showUpload(
+          'Attachment page uploaded to the public RECAP Archive',
+          () => {}
+        );
+      }
+    );
   };
 
   handleFullDocketSearchPage(){
@@ -217,16 +265,30 @@ class AppellateDelegate {
     console.log("handleFullDocketSearchPage")
   };
 
-  handleDocketPage(){
-    // set params for upload
-    // wrap the parameters in an object to permit null params
+  async handleDocketPage(){
+    console.log("handleDocketPage")
+  
+    // set pacerCaseId for pages down the line
     const anchors = [...document.querySelectorAll('a')];
+    const pacerCaseId = PACER.getCaseIdFromAppellateDocketPage(anchors);
+    if (pacerCaseId) {
+      await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId }});
+    };
+
+    // don't upload more than once per session
+    if (history.state && history.state.uploaded) { return; };
+    
+    // don't upload if the user disabled the option
+    const options = await getItemsFromStorage('options');
+    if (options.recap_enabled === false) { return; };
+    
     const params = { 
+      pacerCaseId,
       htmlPage: document.documentElement.outerHTML,
       uploadType: this.targetPage === 'fullDocket' ? 'FULL_DOCKET' : 'SHORT_DOCKET',
       pacerCourt: this.court,
-      pacerCaseId: PACER.getCaseIdFromAppellateDocketPage(anchors),
-    }
+    };
+    
     // upload page through recap instance
     this.recap.uploadAppellatePage(
       params,
@@ -239,5 +301,14 @@ class AppellateDelegate {
       }
     );
   };
+
+  onDocumentDownload() {
+    console.log("onDocumentDownload");
+    const hiddenInput = document.querySelector('input#originalLink');
+    alert(hiddenInput);
+    console.log(hiddenInput)
+    // hiddenInput.click();
+  }
+
 };
 

@@ -130,11 +130,46 @@ const N87GC2 = "45c7946dd8400ad62662565cf79da3c081d9b0e5"
 
 // helper functions for chrome local storage
 
+const checkForOpenerTabId = () =>  new Promise(resolve => {
+  chrome.runtime.sendMessage(
+    { message: 'requestOpenerTabId' },
+    (msg) => resolve(msg)
+  );
+});
+
+const searchAllTabsForCaseId = async (docId) => {
+  // pass null key to get all storage
+  // do sparingly as full storage calls are more expensive
+  const storage = await getItemsFromStorage(null);
+
+  // iterate over storage and return if a caseId is found
+  const map = storage.map(tabStorage => {
+    // punt if the storage key is not a numerical tabId
+    console.log(!tabStorage.match(/^\d$/), tabStorage);
+    if (!tabStorage.match(/^\d+$/)) { return; };
+
+    // destructure the store
+    const { docId, caseId, docsToCases } = tabStorage;
+
+    // return the caseId if docsToCases has the docId
+    
+    if (docsToCases.keys().includes(docId)) {
+      return caseId;
+    }
+  });
+
+  if (map.length > 0) {
+    return map[0]
+  }
+};
+
 const getItemsFromStorage = (key) => new Promise((resolve, reject) => {
-  chrome.storage.local.get(null, result => {
-    resolve(result[key])
-  })
-})
+  // tabId is a number, so we convert it to string
+  const item = (typeof key === 'number') ? key.toString() : key;
+  chrome.storage.local.get(item, result => {
+    resolve(result[item]);
+  });
+});
 
 const saveItemToStorage = (dataObj) => new Promise((resolve, reject) =>
   chrome.storage.local.set(
@@ -146,15 +181,18 @@ const saveItemToStorage = (dataObj) => new Promise((resolve, reject) =>
 );
 
 const destroyTabStorage = key => {
-  chrome.storage.local.get(null, store => {
-    if (store[key]) {
+  // tabId is a number, so we convert it to string
+  const item = (typeof key === 'number') ? key.toString() : key;
+  chrome.storage.local.get(key, store => {
+    if (store) {
       chrome.storage.local.remove(
         key.toString(),
         () => console.log(`Removed item from storage with key ${key}`)
       )
     }
   })
-}
+};
+
 // initialize the store with an empty object
 const getTabIdForContentScript = () => new Promise(resolve => {
   chrome.runtime.sendMessage(
@@ -171,6 +209,7 @@ const updateTabStorage = async object => {
   // keep store immutable
   await saveItemToStorage({ [tabId]: { ...store, ...updatedVars } });
 };
+
 // Default settings for any jquery $.ajax call.
 $.ajaxSetup({
   // The dataType parameter is a security measure requested by Opera code

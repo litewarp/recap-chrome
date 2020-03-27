@@ -15,22 +15,24 @@ let links = document.body.getElementsByTagName('a');
 
 // seed the content_delegate with the tabId by waiting for the
 // message to return from the background worker before initializing
-getTabIdForContentScript().then(msg => {
+getTabIdForContentScript().then(({ tabId }) => {
 
-  // destructure the msg object to get the tabId
-  const { tabId } = msg;
-
+  // if it is an appellate court, dispatch the appellate delegate
   if (PACER.isAppellateCourt(court)) {
-    const appellateDelegate = new AppellateDelegate({
-      tabId, 
-      court,
-      links,
-      pacerCaseId: pacer_case_id, 
-      pacerDocId: pacer_doc_id,
-    });
-    appellateDelegate.handleTargetPage();
-  
+
+    // don't pass in caseId or docId as the delegate will fetch it from the
+    // approprite source and the existing method returns the incorrect docketId
+    const AppDelegate = new AppellateDelegate({ tabId, court, links });
+    
+    // do not dispatch page handler if recap is not enabled
+    if (!PACER.hasPacerCookie(document.cookie)) {
+      console.info(`RECAP: Taking no actions because not logged in: ${url}`)
+      return;
+    }
+    AppDelegate.handleTargetPage();
+
   } else {
+    
     let content_delegate = new ContentDelegate(tabId,
       url, path, court, pacer_case_id, pacer_doc_id, links);
 

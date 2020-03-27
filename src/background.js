@@ -79,6 +79,8 @@ function showNotificationTab(details){
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.message === 'requestTabId') {
     sendResponse({ tabId: sender.tab.id });
+  } else if (msg.message === 'requestOpenerTabId') {
+    sendResponse({ openerTabId: sender.tab.openerTabId || null });
   }
 });
 

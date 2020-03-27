@@ -268,10 +268,10 @@ function Recap() {
       });
       if (response.ok) {
         console.info(`RECAP: Successfully uploaded Appellate Page of type ${uploadType}`);
-        cb(reponse.json());
+        callback(reponse.json());
       } else {
         console.error(`RECAP: Failed to upload Appellate Page of type ${uploadType} `)
-        cb(null);
+        callback(null);
       }
     },
     uploadAppellateDocument: ({ htmlPage }) => {
