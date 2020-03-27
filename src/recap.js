@@ -11,7 +11,13 @@ function Recap() {
       'APPELLATE_DOCKET': 5,
       'APPELLATE_ATTACHMENT_PAGE': 6,
       'ZIP': 10,
-    };
+    },
+    APPELLATE_UPLOAD_TYPES = {
+      // ridiculous numbers to err on server
+      'FULL_DOCKET': 1000,
+      'SHORT_DOCKET': 2000,
+      'CASE_QUERY': 3000,
+    }
   return {
 
     //Given a pacer_doc_id, return the pacer_case_id that it is associated with
@@ -236,6 +242,40 @@ function Recap() {
           destroyTabStorage(cb.tab.id);
         })
         .catch(error => console.log(`RECAP: Error uploading Zip: ${error}`));
+    },
+    uploadAppellatePage: async (params, callback) => {
+      const { htmlPage, uploadType, pacerCourt, pacerCaseId, pacerDocId } = params;
+      console.info([
+        `RECAP: Attempting to upload Appellate Page of type ${uploadType} with details:`,
+        `pacerCourt: ${pacerCourt}`,
+        `pacerCaseId: ${pacerCaseId}`,
+        `pacerDocId: ${pacerDocId}`
+      ].join(' '));
+
+      const html = new Blob([htmlPage], { type: 'text/html'} );
+      const formData = new FormData();
+      formData.append('court', PACER.convertToCourtListenerCourt(pacerCourt));
+      pacerCaseId && formData.append('pacer_case_id', pacerCaseId);
+      pacerDocId && formData.append('pacer_doc_id', pacerDocId);
+      formData.append('upload_type', APPELLATE_UPLOAD_TYPES[uploadType]);
+      formData.append('debug', DEBUG);
+      formData.append('filepath_local', html )
+      
+      const response = await fetch(`${SERVER_ROOT}recap/`, {
+        method: 'POST',
+        body: formData,
+        headers: {'Authorization': `Token ${N87GC2}`}
+      });
+      if (response.ok) {
+        console.info(`RECAP: Successfully uploaded Appellate Page of type ${uploadType}`);
+        cb(reponse.json());
+      } else {
+        console.error(`RECAP: Failed to upload Appellate Page of type ${uploadType} `)
+        cb(null);
+      }
+    },
+    uploadAppellateDocument: ({ htmlPage }) => {
+      //
     }
   };
 }

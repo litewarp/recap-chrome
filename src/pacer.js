@@ -337,6 +337,42 @@ let PACER = {
     return PACER.APPELLATE_COURTS.includes(court);
   },
 
+  getCaseIdFromAppellateDocketPage: function (anchors) {
+    const anchor = anchors.find(anchor => anchor.title === 'Open Document');
+    // check the anchors for the title "Open Document" - present on short and full dockets
+    // and caseId which will be the second argument in the onclick function
+    // for example <a onclick="return doDocPostURL('00107526453','45856') " title="Open Document"></a> 
+    if (anchor) {
+      const onclickString = anchor.attributes.onclick.value;
+      // find single quote five digits single quote followed by closing paren
+      const caseId = onclickString.match(/\'\d{4,6}\'(?=\))/)[0];
+      return caseId.replace(/\'/g,'');
+    }
+  },
+
+  getCaseIdFromAppellateCaseQueryPage: function(inputs) {
+    // check the inputs for a value named caseid - present on case query page
+    const input = inputs.find(input => input.name === 'caseid' && !!input.value);
+    if (input) {
+      return input.value;
+    }
+  },
+
+  getCaseIdFromAppellateUrl: function (url) {
+    // only return caseid if between 4 and 6 non-broken digits (can modify)
+    const matches = url.match(/caseid=\d{4,6}/);
+    if (matches[0]) {
+      return matches[0].replace('caseid=', '');
+    };
+  },
+  
+  getCaseIdFromAppellateSearchResults: function (anchors) {
+    // only return caseid if between 4 and 6 non-broken digits (can modify)
+    const urls = anchors.find(anchor => anchor.href.match(/caseid=\d{4,6}/));
+    if (urls.length > 0) {
+      return urls[0].replace('caseid=');
+    }
+  },
   // These are all the supported PACER court identifiers, together with their
   // West-style court name abbreviations.
   COURT_ABBREVS: {

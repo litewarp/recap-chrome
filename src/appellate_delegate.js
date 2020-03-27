@@ -68,13 +68,18 @@
 
 // appellate 
 
-
 class AppellateDelegate {
-  constructor({ tabId }) {
+  constructor({ tabId, court, links, pacerCaseId, pacerDocId }) {
     this.tabId = tabId;
+    this.court = court;
+    this.pacerCaseId = pacerCaseId;
     this.targetPage = this.getTargetPage();
+
+    this.notifier = importInstance(Notifier);
+    this.recap = importInstance(Recap);
+    this.links = links || []
   }
-  // correct identifiers for 1st, 2nd
+  // confirmed identifiers for 1st, 2nd Circuits
   getTargetPage() {
     // check the document head for a title
     const title = !!document.head.textContent
@@ -112,6 +117,127 @@ class AppellateDelegate {
       }
     }
   }
-  
+  handleTargetPage(){
+    // punt if no cookie
+    if (!PACER.hasPacerCookie(document.cookie)) {
+      return;
+    }
+    switch(this.targetPage) {
+    case ('caseSearch'): 
+      this.handleCaseSearchPage();
+      break;
+    case ('advancedCaseSearch'): 
+      this.handleCaseSearchPage();
+      break;
+    case 'caseQuery': 
+      this.handleCaseQueryPage();
+      break;
+    case 'caseSearchResults': 
+      this.handleCaseSearchResultsPage();
+      break;
+    case 'documentDownloadConfirmation': 
+      this.handleDocumentDownloadConfirmationPage();
+      break;
+    case 'multiDocumentDownload': 
+      this.handleMultiDocumentDownloadPage();
+      break;
+    case 'fullDocketSearch': 
+      this.handleFullDocketSearchPage();
+      break;
+    case ('fullDocket'): 
+      this.handleDocketPage();
+      break;
+    case ('shortDocket'): 
+      this.handleDocketPage();
+      break;
+    default:
+      return;
+    };
+  };
+
+  handleCaseSearchPage(){
+    console.log("handleCaseSearchPage")
+    // store info
+  };
+
+  handleCaseSearchResultsPage (){
+    // store caseId in tabStorage
+    // unsure if needed since caseId can be obtained from docket pages
+    // this is probably cleaner
+    const anchors = [...document.querySelectorAll('a')];
+    const pacerCaseId = PACER.getCaseIdFromAppellateSearchResults(anchors);
+    if (pacerCaseId){
+      updateTabStorage({ [this.tabId]: { caseId: pacerCaseId } })
+    };
+  };
+
+  handleCaseQueryPage(){
+    // set params for upload
+    const inputs = [...document.querySelectorAll('input')];
+    const params = {
+      // render the html as a string
+      htmlPage: document.documentElement.outerHTML,
+      uploadType: 'CASE_QUERY',
+      pacerCourt: this.court,
+      pacerCaseId: PACER.getCaseIdFromAppellateCaseQueryPage(inputs),
+    };
+    // upload page through recap instance
+    this.recap.uploadAppellatePage(
+      params,
+      // send a callback for now to mimic contentDelegate
+      (response) => {
+        history.replaceState({ uploaded: true }, '');
+        this.notifier.showUpload(
+          'Case query page uploaded to the public RECAP Archive',
+          () => {}
+        );
+      }
+    )
+  };
+
+  handleDocumentDownloadConfirmationPage() {
+    console.log("handleDocumentDownloadConfirmationPage")
+    // replace form action and 
+    // add listener for button click
+    // handle the download and push to docketDisplayPage
+  };
+
+  handleMultiDocumentDownloadPage() {
+    console.log("handleMultiDocumentDownloadPage")
+    getItemsFromStorage(this.tabId).then(tabStorage => {
+      const pacerCaseId = tabStorage['caseId'] 
+      // add notification that multi aren't supported 
+
+      const attachmentPageHtml = document.documentElement.outerHTML;
+    });    
+  };
+
+  handleFullDocketSearchPage(){
+    // store info
+    console.log("handleFullDocketSearchPage")
+  };
+
+  handleDocketPage(){
+    // set params for upload
+    // wrap the parameters in an object to permit null params
+    const anchors = [...document.querySelectorAll('a')];
+    const params = { 
+      htmlPage: document.documentElement.outerHTML,
+      uploadType: this.targetPage === 'fullDocket' ? 'FULL_DOCKET' : 'SHORT_DOCKET',
+      pacerCourt: this.court,
+      pacerCaseId: PACER.getCaseIdFromAppellateDocketPage(anchors),
+    }
+    // upload page through recap instance
+    this.recap.uploadAppellatePage(
+      params,
+      (response) => {
+        history.replaceState({ uploaded: true }, '');
+        this.notifier.showUpload(
+          'Docket page uploaded to the public RECAP Archive',
+          () => {}
+        );
+      }
+    );
+  };
 };
 
