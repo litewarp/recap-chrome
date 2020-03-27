@@ -3,6 +3,7 @@
 let url = window.location.href;
 let court = PACER.getCourtFromUrl(url);
 
+
 // Create a delegate for handling the various states we might be in.
 let path = window.location.pathname;
 // Referrer is used here because typically the URL that has the pacer_case_id is
@@ -20,6 +21,8 @@ getTabIdForContentScript().then(msg => {
   // destructure the msg object to get the tabId
   const { tabId } = msg;
 
+  const appellateDelegate = new AppellateDelegate({tabId});
+  console.log(appellateDelegate)
   let content_delegate = new ContentDelegate(tabId,
     url, path, court, pacer_case_id, pacer_doc_id, links);
 
