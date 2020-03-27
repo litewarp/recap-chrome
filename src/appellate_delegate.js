@@ -23,6 +23,10 @@
 //   url: ecf.ca1.uscourts.gov/in/beam/servlet/TransportRoom?servlet=CaseSearch.jsp
 //   document head has title "Case Search"
 //   document has div with className "pageTitle" which contains string "Case Search"
+// Advanced Case Search
+//   url: ecf.ca2.uscourts.gov/n/beam/servlet/TransportRoom?servlet=CaseSearch.jsp&advancedSearch=Advanced 
+//   document head title is "Case Search - Advanced"
+//   document has div with class "pageTitle" that is "Case Search - Advanced"
 // Case Search Results
 //  url: ecf.ca1.uscourts.gov/in/beam/servlet/TransportRoom
 //  document head has title "Cases Selection Table"
@@ -70,17 +74,17 @@ class AppellateDelegate {
     this.tabId = tabId;
     this.targetPage = this.getTargetPage();
   }
-
+  // correct identifiers for 1st, 2nd
   getTargetPage() {
     // check the document head for a title
     const title = !!document.head.textContent
       ? document.head.querySelector('title').text.trim()
       : '';
-    // check the page for an embedded pdf viewer
-    const embed = document.querySelector('embed');
     // return page name depending on match
     if (title === 'Case Search') {
       return 'caseSearch';
+    } else if (title === 'Case Search - Advanced') {
+      return 'advancedCaseSearch';
     } else if (title === 'Cases Selection Table') {
       return 'caseSearchResults';
     } else if (title === 'Case Query') {
@@ -96,6 +100,8 @@ class AppellateDelegate {
     } else if (title.match(/\d+-\d+\sSummary/)) {
       return 'shortDocket';
     } else {
+      // check the page for an embedded pdf viewer
+      const embed = document.querySelector('embed');
       // an embed element will indicate a download document page if 
       // type = 'application/pdf' or 'application/x-google-chrome-pdf'
       if (embed && embed.type.includes('pdf')) {
@@ -106,5 +112,6 @@ class AppellateDelegate {
       }
     }
   }
+  
 };
 
