@@ -210,11 +210,11 @@ class AppellateDelegate {
     // handle the download and push to docketDisplayPage
     const inputs = [...document.querySelectorAll('input')];
     const input = inputs.find(input => input.type === 'button' && input.value.includes('Accept'));
-   
+
     const newInput = document.createElement('input');
     newInput.setAttribute('type', 'button');
     newInput.setAttribute('value', input.value);
-    newInput.addEventListener('click', () => window.postMessage(`{ url: ${document.URL} }`));
+    newInput.addEventListener('click', () => window.postMessage(input.attributes.onclick.baseURI));
 
     // we replace the onclick button with a listener and
     // store the onclick method in a hidden element for the worker to use later
@@ -302,12 +302,13 @@ class AppellateDelegate {
     );
   };
 
-  onDocumentDownload() {
+  async onDocumentDownload(event) {
+    const data = event.data;
+    console.log(data);
     console.log("onDocumentDownload");
-    const hiddenInput = document.querySelector('input#originalLink');
-    alert(hiddenInput);
-    console.log(hiddenInput)
-    // hiddenInput.click();
+    
+    const result = await fetch(data);
+    console.log(result);
   }
 
 };
