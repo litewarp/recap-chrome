@@ -201,30 +201,6 @@ class AppellateDelegate {
     );
   };
 
-  // TODO: add notification that multi aren't supported 
-  handleDownloadConfirmationPage() {
-    console.log("handleDocumentDownloadConfirmationPage")
-
-    // replace form action and 
-    // add listener for button click
-    // handle the download and push to docketDisplayPage
-    const inputs = [...document.querySelectorAll('input')];
-    const input = inputs.find(input => input.type === 'button' && input.value.includes('Accept'));
-
-    const newInput = document.createElement('input');
-    newInput.setAttribute('type', 'button');
-    newInput.setAttribute('value', input.value);
-    newInput.addEventListener('click', () => window.postMessage(input.attributes.onclick.baseURI));
-
-    // we replace the onclick button with a listener and
-    // store the onclick method in a hidden element for the worker to use later
-    input.setAttribute('type', 'hidden');
-    input.setAttribute('id', 'originalLink');
-    input.insertAdjacentElement('beforebegin', newInput);
-    
-    window.addEventListener('message', this.onDocumentDownload.bind(this), false);
-  };
-
   async handleAttachmentMenuPage() {
     console.log("handleAttachmentMenuPage")
 
@@ -302,13 +278,66 @@ class AppellateDelegate {
     );
   };
 
-  async onDocumentDownload(event) {
-    const data = event.data;
-    console.log(data);
-    console.log("onDocumentDownload");
+  // TODO: add notification that multidocument downloads aren't supported 
+  handleDownloadConfirmationPage() {
+    console.log("handleDocumentDownloadConfirmationPage")
+
+    // we replace the onclick button with a listener and
+    // store the onclick method in a hidden element for the worker to use later
+    const inputs = [...document.querySelectorAll('input')];
+    const input = inputs.find(input => input.type === 'button' && input.value.includes('Accept'));
     
-    const result = await fetch(data);
-    console.log(result);
+    const newInput = document.createElement('input');
+    newInput.setAttribute('type', 'button');
+    newInput.setAttribute('value', input.value);
+    newInput.addEventListener('click', () => window.postMessage(input.attributes.onclick.baseURI));
+
+    input.setAttribute('type', 'hidden');
+    input.setAttribute('id', 'originalLink');
+    input.insertAdjacentElement('beforebegin', newInput);
+
+    window.addEventListener('message', this.onDocumentDownload.bind(this), false);
+  };
+
+  async onDocumentDownload(event) {
+    console.log("onDocumentDownload");
+
+    $('body').css('cursor', 'wait');
+   
+    // make back button display the previous page
+    window.onpopstate = ({ state }) => {
+      if (state.content) {
+        document.documentElement.innerHTML = state.content; 
+      }
+    };
+    history.replaceState({ content: document.documentElement.innerHTML }, '');
+
+    const inputs = [...document.querySelectorAll('form > input')];
+    const inputData = [];
+    inputs.map(({ name, value }) => {
+      // excludes the submit button and the 'recp' undefined field
+      if (!!name && !!value) { inputData[name] = value; };
+    });
+    // set the receipt field to currentTime to mimic the pacer call
+    const params = { ...inputData, recp: new Date().getTime() };
+
+    console.log(params)
+    const url = new URL(event.data);
+    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+
+    const blob = await contentScriptFetch(url).then(res => res.blob()) 
+    console.log(blob);
+    
+    if (blob.type === 'text/html') {
+      const html = await blob.text();
+      console.log(html);
+    } 
+
+    const dataUrl = await blobToDataURL(blob);
+    
+    await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl }});
+
+    console.log(dataUrl);
   }
 
 };

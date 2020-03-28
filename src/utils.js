@@ -230,6 +230,12 @@ $.ajaxSetup({
   }
 });
 
+// In Firefox, calls from the content script require content.fetch
+
+const contentScriptFetch = (navigator.userAgent.indexOf('Chrome') < 0) 
+  ? content.fetch 
+  : window.fetch;
+
 const blobToDataURL = (blob) => {
   return new Promise((resolve, reject) => {
     let reader = new FileReader();
