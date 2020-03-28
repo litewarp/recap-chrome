@@ -107,6 +107,7 @@ class AppellateDelegate {
     } else {
       // check the page for an embedded pdf viewer
       const embed = document.querySelector('embed');
+      console.log(embed)
       // an embed element will indicate a download document page if 
       // type = 'application/pdf' or 'application/x-google-chrome-pdf'
       if (embed && embed.type.includes('pdf')) {
@@ -300,11 +301,11 @@ class AppellateDelegate {
   };
 
   async onDocumentDownload(event) {
+    // 0. initialize the function and fetch async data
     console.log("onDocumentDownload");
+    document.querySelector('body').className += ' cursor wait';
 
-    $('body').css('cursor', 'wait');
-   
-    // make back button display the previous page
+    // 1.  make the back button display the previous page //
     window.onpopstate = ({ state }) => {
       if (state.content) {
         document.documentElement.innerHTML = state.content; 
@@ -312,6 +313,7 @@ class AppellateDelegate {
     };
     history.replaceState({ content: document.documentElement.innerHTML }, '');
 
+    // 2.  collect the formData to request the pdf
     const inputs = [...document.querySelectorAll('form > input')];
     const inputData = [];
     inputs.map(({ name, value }) => {
@@ -319,26 +321,82 @@ class AppellateDelegate {
       if (!!name && !!value) { inputData[name] = value; };
     });
     // set the receipt field to currentTime to mimic the pacer call
-    const params = { ...inputData, recp: new Date().getTime() };
+    const formData = { ...inputData, recp: new Date().getTime() };
 
-    console.log(params)
+    // 3. encode the params as URL search params to match the pacer request
+    // see https://fetch.spec.whatwg.org/#fetch-api
     const url = new URL(event.data);
-    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+    Object.keys(formData).forEach(key => url.searchParams.append(key, formData[key]));
 
-    const blob = await contentScriptFetch(url).then(res => res.blob()) 
-    console.log(blob);
-    
-    if (blob.type === 'text/html') {
-      const html = await blob.text();
-      console.log(html);
-    } 
-
+    // 4. get the blob and store it
+    const blob = await contentScriptFetch(url).then(res => res.blob());
     const dataUrl = await blobToDataURL(blob);
-    
     await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl }});
 
-    console.log(dataUrl);
-  }
+    // 5. build the innerHtml to show the user
+    const options = await getItemsFromStorage('options');
+    
+    //   helper -- abstract
+    const getDocketNumber = () => {
+      const td = [...document.querySelectorAll('td')].find(
+        td => td.textContent.match(/Case\: \d{2}-\d{4}/)
+      )
+      return td.textContent.match(/\d{2}\-\d{4}/)[0]
+    };
+    
+    // build params before you set the new innerHTML
+    const params = {
+      pacerCaseId: formData.caseId,
+      pacerDocId: formData.dls_id,
+      court: this.court,
+    };
+
+    const filename = await generateFileName({
+      iaStyle: options.ia_style_filenames,
+      docketNumber: getDocketNumber(),
+      attachmentNumber: '', // no relevant number found
+      suffix: 'pdf', // for future zip support?
+      ...params
+    });
+
+    const externalPdfEnabled = chromeBrowserAndPdfViewerEnabled()
+      ? true
+      : options.external_pdf_enabled;
+
+    if (externalPdfEnabled) {
+      saveAs(blob, filename);
+    } else {
+      const blobUrl = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.src = blobUrl;
+      iframe.setAttribute('height','100%');
+      iframe.setAttribute('width', '100%');
+      iframe.style = 'border: none';
+      
+      const html = document.createElement('html');
+      const body = document.createElement('body');
+      body.style.margin = 0;
+      body.style.height = '100vh';
+      body.appendChild(iframe);
+      
+      html.appendChild(body);
+
+      document.documentElement.innerHTML = html.innerHTML;
+      history.pushState({ content: html.innerHTML}, '');
+    };
+
+    // 6. upload it to recap
+    this.recap.uploadAppellateDocument(
+      params, 
+      (response) => {
+        history.replaceState({ uploaded: true }, '');
+        this.notifier.showUpload(
+          'PDF page uploaded to the public RECAP Archive',
+          () => {}
+        );
+      }
+    ); 
+  };
 
 };
 

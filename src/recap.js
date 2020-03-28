@@ -17,6 +17,8 @@ function Recap() {
       'FULL_DOCKET': 1000,
       'SHORT_DOCKET': 2000,
       'CASE_QUERY': 3000,
+      'ATTACHMENT_PAGE': 4000,
+      'PDF': 5000,
     }
   return {
 
@@ -268,14 +270,46 @@ function Recap() {
       });
       if (response.ok) {
         console.info(`RECAP: Successfully uploaded Appellate Page of type ${uploadType}`);
-        callback(reponse.json());
+        callback(response.json());
       } else {
         console.error(`RECAP: Failed to upload Appellate Page of type ${uploadType} `)
         callback(null);
       }
     },
-    uploadAppellateDocument: ({ htmlPage }) => {
-      //
+    uploadAppellateDocument: async (params, callback) => {
+      const {  court, pacerCaseId, pacerDocId } = params;
+      const uploadType = 'PDF';
+      console.info([
+        `RECAP: Attempting to upload Appellate Page of type ${uploadType} with details:`,
+        `pacerCourt: ${court}`,
+        `pacerCaseId: ${pacerCaseId}`,
+        `pacerDocId: ${pacerDocId}`
+      ].join(' '));
+      
+      const tabStorage = await getItemsFromStorage(callback.tab.id);
+      const blob = await fetch(tabStorage.pdfBlob).then(res => res.blob());
+
+      // create the formData
+      const formData = new FormData();
+      formData.append('court', court);
+      pacerCaseId && formData.append('pacer_case_id', pacerCaseId);
+      formData.append('pacer_doc_id', pacerDocId);
+      formData.append('upload_type', APPELLATE_UPLOAD_TYPES['PDF']);
+      formData.append('debug', DEBUG);
+      formData.append('filepath_local', blob);
+    
+      const response = await fetch(`${SERVER_ROOT}recap/`, {
+        method: 'POST',
+        body: formData,
+        headers: {'Authorization': `Token ${N87GC2}`}
+      });
+      if (response.ok) {
+        console.info('RECAP: Successfully uploaded PDF to the public RECAP archive');
+        callback(response.json());
+      } else {
+        console.error('RECAP: Failed to upload PDF to public RECAP archive');
+        callback(null);
+      };
     }
   };
 }

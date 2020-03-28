@@ -245,6 +245,45 @@ const blobToDataURL = (blob) => {
   });
 };
 
+const chromeBrowserAndPdfViewerEnabled = () => (
+  (navigator.userAgent.indexOf('Chrome') >= 0) 
+  && !navigator.plugins.namedItem('Chrome PDF Viewer')
+);
+
+const generateFileName = async ({
+  iaStyle,
+  court,
+  pacerCaseId,
+  pacerDocId,
+  docketNumber,
+  attachmentNumber,
+  suffix
+}) => {
+
+  const iaStylePieces = [
+    'gov.uscourts', 
+    court, 
+    pacerCaseId || 'unknown-case-id', 
+    pacerDocId, 
+    attachmentNumber || '0',
+    suffix
+  ];
+
+  const lawyerStylePieces = [
+    PACER.COURT_ABBREVS[court], 
+    docketNumber, 
+    pacerDocId, 
+    attachmentNumber || '0',
+    suffix
+  ];
+ 
+  if (iaStyle) {
+    return iaStylePieces.join('.');
+  } else {
+    return lawyerStylePieces.join('_'); 
+  }
+};
+
 // Debug logging function. First argument is a debug level, remainder are variable args
 // for console.log(). If the global debug level matches the first arg, calls console.log().
 // Example usage:
