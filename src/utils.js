@@ -245,7 +245,7 @@ const blobToDataURL = (blob) => {
   });
 };
 
-const chromeBrowserAndPdfViewerEnabled = () => (
+const isChromeBrowserAndPdfViewerDisabled = () => (
   (navigator.userAgent.indexOf('Chrome') >= 0) 
   && !navigator.plugins.namedItem('Chrome PDF Viewer')
 );

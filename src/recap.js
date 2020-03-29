@@ -272,6 +272,7 @@ function Recap() {
       if (response.ok) {
         console.info(`RECAP: Successfully uploaded Appellate Page of type ${uploadType}`);
         callback(response.json());
+        destroyTabStorage(callback.tab.id);
       } else {
         console.error(`RECAP: Failed to upload Appellate Page of type ${uploadType} `)
         callback(null);
@@ -308,6 +309,7 @@ function Recap() {
       if (response.ok) {
         console.info('RECAP: Successfully uploaded PDF to the public RECAP archive');
         callback(response.json());
+        destroyTabStorage(callback.tab.id);
       } else {
         console.error('RECAP: Failed to upload PDF to public RECAP archive');
         callback(null);

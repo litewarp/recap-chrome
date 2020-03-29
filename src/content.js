@@ -26,10 +26,10 @@ getTabIdForContentScript().then(({ tabId }) => {
     
     // do not dispatch page handler if recap is not enabled
     if (!PACER.hasPacerCookie(document.cookie)) {
-      console.info(`RECAP: Taking no actions because not logged in: ${url}`)
+      console.info(`RECAP: Taking no actions because not logged in: ${url}`);
       return;
     }
-    AppDelegate.handleTargetPage();
+    AppDelegate.dispatchTargetHandler();
 
   } else {
     

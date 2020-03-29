@@ -62,12 +62,6 @@
 //      document head has title "Case Query"
 //      document has div with className "pageTitle" which contains "Case Query"
 
-// block multi-pdfs
-// handle advanced searching
-// autocheck pdf headers
-
-// appellate 
-
 class AppellateDelegate {
   constructor({ tabId, court, links, pacerDocId }) {
     this.tabId = tabId;
@@ -79,7 +73,8 @@ class AppellateDelegate {
     this.links = links || [];
   }
 
-  // confirmed identifiers for 1st, 2nd, 3rd Circuits
+  // identify the current page
+  // currently only implements head title check
   setTargetPage() {
     // check the document head for a title
     const title = !!document.head.textContent
@@ -105,120 +100,54 @@ class AppellateDelegate {
     } else if (title.match(/\d+-\d+\sSummary/)) {
       return 'shortDocket';
     } else {
-      setTimeout(()=> {
-        // check the page for an embedded pdf viewer
-        const embed = document.querySelector('embed');
-        console.log(embed)
-        // an embed element will indicate a download document page if 
-        // type = 'application/pdf' or 'application/x-google-chrome-pdf'
-        if (embed && embed.type.includes('pdf')) {
-          return 'documentDownload';
-        } else {
-          console.info('No identified appellate page found');
-          return;
-        }
-      }, 10000);
+      // check the page for an embedded pdf viewer
+      const embed = document.querySelector('embed');
+      // an embed element will indicate a download document page if 
+      // type = 'application/pdf' or 'application/x-google-chrome-pdf'
+      if (embed && embed.type.includes('pdf')) {
+        return 'documentDownload';
+      } else {
+        console.info('No identified appellate page found');
+        return;
+      }
     }
   };
-  
-  async handleOpinionLink({ pacerCaseId }){
-    const trs = [...document.querySelectorAll('tr')]
-    const opinionTr = trs.find(tr => {
-      if ([...tr.children].length > 0) {
-        const match = [...tr.children].find(
-          td => (td.textContent.match(/OPINION/) && td.width === "90%")
-        );
-        if (match) { return true; };
-      }
-    });
-    const link = opinionTr.querySelector('a');
-    if (link) {
-      const params = {
-        caseId: pacerCaseId,
-        dls_id: link.href.match(/docs1\/(\d+)/)[1],
-        servlet: 'ShowDoc',
-        dktType: 'dktPublic',
-      };
-      // encode the params as URL params
-      const url = new URL(document.URL.replace(/\?.*$/,''));
-      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-
-      const blob = await contentScriptFetch(url).then(res => {
-        return res.blob();
-      });
-
-      const fetchParams = {
-        court: this.court,
-        pacerCaseId: pacerCaseId,
-        pacerDocId: params.dls_id
-      };
-
-      if (blob.type.includes('pdf')) {
-        // upload it to recap
-        const dataUrl = await blobToDataURL(blob);
-        await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl }});
-        this.recap.uploadAppellateDocument(
-          fetchParams, 
-          (response) => {
-            this.notifier.showUpload(
-              'Case Opinion automatically uploaded to the public RECAP Archive',
-              () => {}
-            );
-            // insert available for free tag on item
-          }
-        ); 
-      }
-    }
-  }
 
   // dispatch associated handler
-  handleTargetPage(){
+  dispatchTargetHandler(){
     if (this.targetPage === 'caseQuery') {
       this.handleCaseQueryPage();
-
     } else if (this.targetPage === 'caseSearchResults') {
       this.handleCaseSearchResultsPage();
-
     } else if (this.targetPage === 'downloadConfirmation') { 
       this.handleDownloadConfirmationPage();
-
     } else if (this.targetPage === 'attachmentMenu') {
       this.handleAttachmentMenuPage();
-
     } else if (this.targetPage === 'fullDocketSearch') { 
       this.handleFullDocketSearchPage();
-    
     } else if (this.targetPage === 'caseSearch' || this.targetPage === 'advancedCaseSearch') {
       this.handleCaseSearchPage();
-
     } else if (this.targetPage === 'fullDocket' || this.targetPage === 'shortDocket') {
       this.handleDocketPage();
-
-    } else {
-      return;
-    };
+    }   
   };
 
+  // unclear if needed
   handleCaseSearchPage(){
-    console.log('handleCaseSearchPage')
-    // store info
+    console.log('handleCaseSearchPage');
   };
 
-  handleCaseSearchResultsPage(){
-    console.log("handleCaseSearchResults")
-    // store caseId in tabStorage
-    // unsure if needed since caseId can be obtained from docket pages
-    // this is probably cleaner
+  async handleCaseSearchResultsPage(){
+    console.log('handleCaseSearchResults');
     const anchors = [...document.querySelectorAll('a')];
     const pacerCaseId = PACER.getCaseIdFromAppellateSearchResults(anchors);
     if (pacerCaseId){
-      updateTabStorage({ [this.tabId]: { caseId: pacerCaseId } });
+      await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId } });
     };
   };
 
   async handleCaseQueryPage(){
-    console.log("handleCaseQuery")
-    // set pacerCaseId for pages down the line
+    console.log('handleCaseQuery')
     const inputs = [...document.querySelectorAll('input')];
     const pacerCaseId = PACER.getCaseIdFromAppellateCaseQueryPage(inputs);
     if (pacerCaseId) {
@@ -230,7 +159,6 @@ class AppellateDelegate {
     
     // don't upload if the user disabled the option
     const options = await getItemsFromStorage('options');
-    console.log(options);
     if (options.recap_enabled === false) { return; };
     
     // set params for upload
@@ -304,7 +232,10 @@ class AppellateDelegate {
       await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId }});
     };
 
-    this.handleOpinionLink({pacerCaseId})
+    // if (opinion hasn't already been download) {
+    this.checkForAndUploadOpinion({pacerCaseId});
+    // };
+
     // don't upload more than once per session
     if (history.state && history.state.uploaded) { return; };
     
@@ -336,26 +267,24 @@ class AppellateDelegate {
   handleDownloadConfirmationPage() {
     console.log("handleDocumentDownloadConfirmationPage")
 
-    // we replace the onclick button with a listener and
-    // store the onclick method in a hidden element for the worker to use later
+    // find the download button and hide it
     const inputs = [...document.querySelectorAll('input')];
     const input = inputs.find(input => input.type === 'button' && input.value.includes('Accept'));
-    
+    input.setAttribute('type', 'hidden');
+    // build the dummy input and insert it next to the original button
     const newInput = document.createElement('input');
     newInput.setAttribute('type', 'button');
     newInput.setAttribute('value', input.value);
     newInput.addEventListener('click', () => window.postMessage(input.attributes.onclick.baseURI));
-
-    input.setAttribute('type', 'hidden');
-    input.setAttribute('id', 'originalLink');
     input.insertAdjacentElement('beforebegin', newInput);
 
+    // bind the eventListener to the downloadDocumentHandler
     window.addEventListener('message', this.onDocumentDownload.bind(this), false);
   };
 
   async onDocumentDownload(event) {
     // 0. initialize the function and fetch async data
-    console.log("onDocumentDownload");
+    console.log('onDocumentDownload');
     document.querySelector('body').className += ' cursor wait';
 
     // 1.  make the back button display the previous page //
@@ -377,9 +306,7 @@ class AppellateDelegate {
     const formData = { ...inputData, recp: new Date().getTime() };
 
     // 3. encode the params as URL search params to match the pacer request
-    // see https://fetch.spec.whatwg.org/#fetch-api
-    const url = new URL(event.data);
-    Object.keys(formData).forEach(key => url.searchParams.append(key, formData[key]));
+    const url = this.buildSearchParamsUrl({ url: event.data, params: formData }); 
 
     // 4. get the blob and store it
     const blob = await contentScriptFetch(url).then(res => res.blob());
@@ -387,54 +314,54 @@ class AppellateDelegate {
     await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl }});
 
     // 5. build the innerHtml to show the user
-    const options = await getItemsFromStorage('options');
     
-    //   helper -- abstract
-    const getDocketNumber = () => {
-      const td = [...document.querySelectorAll('td')].find(
-        td => td.textContent.match(/Case\: \d{2}-\d{4}/)
-      )
-      return td.textContent.match(/\d{2}\-\d{4}/)[0]
-    };
-    
-    // build params before you set the new innerHTML
+    // set the params before you set the new innerHTML
     const params = {
       pacerCaseId: formData.caseId,
       pacerDocId: formData.dls_id,
       court: this.court,
     };
-
+   
+    // get needed info to build the filename
+    const options = await getItemsFromStorage('options');
+    const td = [...document.querySelectorAll('td')].find(
+      td => td.textContent.match(/Case\: \d{2}-\d{4}/)
+    );
     const filename = await generateFileName({
       iaStyle: options.ia_style_filenames,
-      docketNumber: getDocketNumber(),
+      docketNumber: td.textContent.match(/\d{2}\-\d{4}/)[0],
       attachmentNumber: '', // no relevant number found
       suffix: 'pdf', // for future zip support?
       ...params
     });
 
-    const externalPdfEnabled = chromeBrowserAndPdfViewerEnabled()
+    const externalPdfEnabled = isChromeBrowserAndPdfViewerDisabled()
       ? true
       : options.external_pdf_enabled;
 
     if (externalPdfEnabled) {
       saveAs(blob, filename);
     } else {
-      const blobUrl = URL.createObjectURL(blob);
+      // create an iframe to display the pdf
       const iframe = document.createElement('iframe');
-      iframe.src = blobUrl;
+      iframe.src = URL.createObjectURL(blob);
       iframe.setAttribute('height','100%');
       iframe.setAttribute('width', '100%');
       iframe.style = 'border: none';
       
-      const html = document.createElement('html');
+      // insert it into a body and set the style
       const body = document.createElement('body');
       body.style.margin = 0;
       body.style.height = '100vh';
       body.appendChild(iframe);
       
+      // insert it into a top-level html element
+      const html = document.createElement('html');
       html.appendChild(body);
 
+      // swap the current documentElement with our new one
       document.documentElement.innerHTML = html.innerHTML;
+      // let the browser know we've 'gone forward' a page
       history.pushState({ content: html.innerHTML}, '');
     };
 
@@ -451,5 +378,67 @@ class AppellateDelegate {
     ); 
   };
 
+  // private methods - add private before release
+  // can't add private now because of eslint issue 
+  
+  // convert formdata to url search params
+  // see https://fetch.spec.whatwg.org/#fetch-api
+  buildSearchParamsUrl({ url, params }) {
+    const newUrl = new URL(url);
+    Object.keys(params).forEach(key => newUrl.searchParams.append(key, params[key]));
+    return newUrl;
+  };
+  
+  // check if the opinion is free to download and if so
+  // fetch it and upload it to recap in the background
+  async checkForAndUploadOpinion({ pacerCaseId }){
+    const trs = [...document.querySelectorAll('tr')]
+    const opinionTr = trs.find(tr => {
+      if ([...tr.children].length > 0) {
+        const match = [...tr.children].find(
+          td => (td.textContent.match(/OPINION/) && td.width === "90%")
+        );
+        if (match) { return true; };
+      }
+    });
+    const link = opinionTr.querySelector('a');
+    if (link) {
+      const params = {
+        caseId: pacerCaseId,
+        dls_id: link.href.match(/docs1\/(\d+)/)[1],
+        servlet: 'ShowDoc',
+        dktType: 'dktPublic',
+      };
+      // encode the params as URL params
+      const url = new URL(document.URL.replace(/\?.*$/,''));
+      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
+      const blob = await contentScriptFetch(url).then(res => {
+        return res.blob();
+      });
+
+      const fetchParams = {
+        court: this.court,
+        pacerCaseId: pacerCaseId,
+        pacerDocId: params.dls_id
+      };
+
+      if (blob.type.includes('pdf')) {
+        // upload it to recap
+        const dataUrl = await blobToDataURL(blob);
+        await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl }});
+        this.recap.uploadAppellateDocument(
+          fetchParams, 
+          (response) => {
+            this.notifier.showUpload(
+              'Case Opinion automatically uploaded to the public RECAP Archive',
+              () => {}
+            );
+            // insert available for free tag on item
+          }
+        ); 
+      }
+    }
+  }
 };
 
