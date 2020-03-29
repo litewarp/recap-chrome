@@ -105,20 +105,72 @@ class AppellateDelegate {
     } else if (title.match(/\d+-\d+\sSummary/)) {
       return 'shortDocket';
     } else {
-      // check the page for an embedded pdf viewer
-      const embed = document.querySelector('embed');
-      console.log(embed)
-      // an embed element will indicate a download document page if 
-      // type = 'application/pdf' or 'application/x-google-chrome-pdf'
-      if (embed && embed.type.includes('pdf')) {
-        return 'documentDownload';
-      } else {
-        console.info('No identified appellate page found');
-        return;
-      }
+      setTimeout(()=> {
+        // check the page for an embedded pdf viewer
+        const embed = document.querySelector('embed');
+        console.log(embed)
+        // an embed element will indicate a download document page if 
+        // type = 'application/pdf' or 'application/x-google-chrome-pdf'
+        if (embed && embed.type.includes('pdf')) {
+          return 'documentDownload';
+        } else {
+          console.info('No identified appellate page found');
+          return;
+        }
+      }, 10000);
     }
   };
   
+  async handleOpinionLink({ pacerCaseId }){
+    const trs = [...document.querySelectorAll('tr')]
+    const opinionTr = trs.find(tr => {
+      if ([...tr.children].length > 0) {
+        const match = [...tr.children].find(
+          td => (td.textContent.match(/OPINION/) && td.width === "90%")
+        );
+        if (match) { return true; };
+      }
+    });
+    const link = opinionTr.querySelector('a');
+    if (link) {
+      const params = {
+        caseId: pacerCaseId,
+        dls_id: link.href.match(/docs1\/(\d+)/)[1],
+        servlet: 'ShowDoc',
+        dktType: 'dktPublic',
+      };
+      // encode the params as URL params
+      const url = new URL(document.URL.replace(/\?.*$/,''));
+      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
+      const blob = await contentScriptFetch(url).then(res => {
+        return res.blob();
+      });
+
+      const fetchParams = {
+        court: this.court,
+        pacerCaseId: pacerCaseId,
+        pacerDocId: params.dls_id
+      };
+
+      if (blob.type.includes('pdf')) {
+        // upload it to recap
+        const dataUrl = await blobToDataURL(blob);
+        await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl }});
+        this.recap.uploadAppellateDocument(
+          fetchParams, 
+          (response) => {
+            this.notifier.showUpload(
+              'Case Opinion automatically uploaded to the public RECAP Archive',
+              () => {}
+            );
+            // insert available for free tag on item
+          }
+        ); 
+      }
+    }
+  }
+
   // dispatch associated handler
   handleTargetPage(){
     if (this.targetPage === 'caseQuery') {
@@ -252,6 +304,7 @@ class AppellateDelegate {
       await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId }});
     };
 
+    this.handleOpinionLink({pacerCaseId})
     // don't upload more than once per session
     if (history.state && history.state.uploaded) { return; };
     

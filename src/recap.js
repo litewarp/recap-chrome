@@ -245,6 +245,7 @@ function Recap() {
         })
         .catch(error => console.log(`RECAP: Error uploading Zip: ${error}`));
     },
+    
     uploadAppellatePage: async (params, callback) => {
       const { htmlPage, uploadType, pacerCourt, pacerCaseId, pacerDocId } = params;
       console.info([
@@ -276,6 +277,7 @@ function Recap() {
         callback(null);
       }
     },
+    
     uploadAppellateDocument: async (params, callback) => {
       const {  court, pacerCaseId, pacerDocId } = params;
       const uploadType = 'PDF';
