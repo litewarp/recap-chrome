@@ -1,66 +1,4 @@
 //  Abstraction of content scripts to make them modular and testable.
-//  Functions:
-
-//  checkRestrictions
-
-//  findAndStorePacerIds
-
-//  handleDocketQueryUrl
-//  handleDocketDisplayPage
-//  handleAttachmentPageMenu
-//  handleSingleDocumentPageCheck
-//  handleOnDocumentViewSubmit
-//  showPdfPage
-//  handleSingleDocumentPageView
-//  handleRecapLinkClick
-//  attachRecapLinkToEligibleDocs
-//  onDownloadAllSubmit
-//  handleZipFilePageView
-
-// Appellate Process Pages
-// ------------------------
-// Case Search
-//   url: ecf.ca1.uscourts.gov/in/beam/servlet/TransportRoom?servlet=CaseSearch.jsp
-//   document head has title "Case Search"
-//   document has div with className "pageTitle" which contains string "Case Search"
-// Advanced Case Search
-//   url: ecf.ca2.uscourts.gov/n/beam/servlet/TransportRoom?servlet=CaseSearch.jsp&advancedSearch=Advanced 
-//   document head title is "Case Search - Advanced"
-//   document has div with class "pageTitle" that is "Case Search - Advanced"
-// Case Search Results
-//  url: ecf.ca1.uscourts.gov/in/beam/servlet/TransportRoom
-//  document head has title "Cases Selection Table"
-//  document has center with value "Case Selection Page"
-//    Short Docket Page
-//      url: ecf.ca1.uscourts.gov/n/beam/servlet/TransportRoom?servlet=CaseSummary.jsp&caseNum=19-1802&incOrigDkt=Y&incDktEntries=Y
-//      document head has title "${CASE_ID} Summary"
-//      document has input with type "submit" and name="fullDocket"
-//    Full Docket Options / Confirmation Page
-//      url: ecf.ca1.uscourts.gov/n/beam/servlet/TransportRoom?servlet=DocketReportFilter.jsp 
-//      document has title "Docket Report Filter"
-//      document has input type="submit" && value="Run Docket Report"
-//        Full Docket
-//          url: ecf.ca1.uscourts.gov/n/beam/servlet/TransportRoom 
-//          document has title "${CASE_ID} Docket"
-//          document has td with string "General Docket"
-//            
-//          ------either get download confirmation page or multi-doc page-----
-//            Multi-Document Download Page
-//              url: https://ecf.ca1.uscourts.gov/n/beam/servlet/TransportRoom 
-//              document head has title "Document"
-//              document has input type="button" and value="Combine All Documents"
-//            Document Download Confirmation Page
-//              url: ecf.ca1.uscourts.gov/n/beam/servlet/TransportRoom
-//              document head has title "Download Confirmation"
-//              document has input type="checkbox" && name="incPdfHeadDisp"
-//            Document show page
-//              url: ecf.ca1.uscourts.gov/n/beam/servlet/TransportRoom 
-//              document head has title "${DOCUMENT_TITLE}"
-//              document has embed type="application/pdf"
-//    Case Query Page
-//      url: ecf.ca1.uscourts.gov/n/beam/servlet/TransportRoom?servlet=CaseQuery.jsp&cnthd=3950728289&caseid=45856&csnum1=19-1802&shorttitle=City+of+Providence%2C+et+al+v.+US+Department+of+Justice%2C+et+al 
-//      document head has title "Case Query"
-//      document has div with className "pageTitle" which contains "Case Query"
 
 class AppellateDelegate {
   constructor({ tabId, court, links, pacerDocId }) {
@@ -137,6 +75,11 @@ class AppellateDelegate {
     console.log('handleCaseSearchPage');
   };
 
+  // unclear if needed
+  handleFullDocketSearchPage(){
+    console.log('handleFullDocketSearchPage')
+  };
+
   async handleCaseSearchResultsPage(){
     console.log('handleCaseSearchResults');
     const anchors = [...document.querySelectorAll('a')];
@@ -183,7 +126,7 @@ class AppellateDelegate {
   };
 
   async handleAttachmentMenuPage() {
-    console.log("handleAttachmentMenuPage")
+    console.log('handleAttachmentMenuPage')
 
     // check if this tab was opened by another and use that tabId
     // to get the relevant tabStorage
@@ -217,13 +160,8 @@ class AppellateDelegate {
     );
   };
 
-  handleFullDocketSearchPage(){
-    // store info
-    console.log("handleFullDocketSearchPage")
-  };
-
   async handleDocketPage(){
-    console.log("handleDocketPage")
+    console.log('handleDocketPage')
   
     // set pacerCaseId for pages down the line
     const anchors = [...document.querySelectorAll('a')];
@@ -232,7 +170,8 @@ class AppellateDelegate {
       await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId }});
     };
 
-    // if (opinion hasn't already been download) {
+    // since opinions may be public we try to grab it
+    // if (recapDoesNotHaveOpinion) {
     this.checkForAndUploadOpinion({pacerCaseId});
     // };
 
@@ -265,7 +204,7 @@ class AppellateDelegate {
 
   // TODO: add notification that multidocument downloads aren't supported 
   handleDownloadConfirmationPage() {
-    console.log("handleDocumentDownloadConfirmationPage")
+    console.log('handleDocumentDownloadConfirmationPage')
 
     // find the download button and hide it
     const inputs = [...document.querySelectorAll('input')];
