@@ -162,7 +162,7 @@ class AppellateDelegate {
   };
 
   async handleDocketPage() {
-    console.log('handleDocketPage')
+    console.log('handleDocketPage');
 
     // set pacerCaseId for pages down the line
     const anchors = [...document.querySelectorAll('a')];

@@ -34,10 +34,10 @@
 // tells you how much a document will cost before you get to view the PDF.
 
 let PACER_TO_CL_IDS = {
-    'azb': 'arb',         // Arizona Bankruptcy Court
-    'cofc': 'uscfc',      // Court of Federal Claims
-    'neb': 'nebraskab',   // Nebraska Bankruptcy
-    'nysb-mega': 'nysb'   // Remove the mega thing
+  'azb': 'arb',         // Arizona Bankruptcy Court
+  'cofc': 'uscfc',      // Court of Federal Claims
+  'neb': 'nebraskab',   // Nebraska Bankruptcy
+  'nysb-mega': 'nysb'   // Remove the mega thing
 };
 
 // Public constants and pure functions.  As these are pure, they can be freely
@@ -47,11 +47,11 @@ let PACER = {
   // Returns the court identifier for a given URL, or null if not a PACER site.
   getCourtFromUrl: function (url) {
     let match = (url || '').toLowerCase().match(
-        /^\w+:\/\/(ecf|pacer)\.(\w+)\.uscourts\.gov\//);
+      /^\w+:\/\/(ecf|pacer)\.(\w+)\.uscourts\.gov\//);
     return match ? match[2] : null;
   },
 
-  convertToCourtListenerCourt: function(pacer_court_id) {
+  convertToCourtListenerCourt: function (pacer_court_id) {
     return PACER_TO_CL_IDS[pacer_court_id] || pacer_court_id;
   },
 
@@ -62,9 +62,9 @@ let PACER = {
   //   https://ecf.ca2.uscourts.gov/docs1/00205695758
   isDocumentUrl: function (url) {
     if (
-        url.match(/\/(?:doc1|docs1)\/\d+/) ||
-        url.match(/\/cgi-bin\/show_doc/) ||
-        url.match(/servlet=ShowDoc/)
+      url.match(/\/(?:doc1|docs1)\/\d+/) ||
+      url.match(/\/cgi-bin\/show_doc/) ||
+      url.match(/servlet=ShowDoc/)
     ) {
       if (PACER.getCourtFromUrl(url)) {
         return true;
@@ -128,7 +128,7 @@ let PACER = {
       let servlet = match[1];
       debug(4, `Identified appellate servlet ${servlet} at ${url}`);
 
-      switch(servlet) {
+      switch (servlet) {
         case 'CaseSummary.jsp':
         case 'ShowPage': // what is this?
         case undefined:
@@ -179,12 +179,12 @@ let PACER = {
 
   // Returns true if this is a "Download Documents" page (confirmation of
   // pricing for all documents to receive a zip file with all of them)
-  isDownloadAllDocumentsPage: function(url, document) {
+  isDownloadAllDocumentsPage: function (url, document) {
     let inputs = document.getElementsByTagName("input");
     let pageCheck =
       !!url.match(/\/show_multidocs\.pl\?/) &&
       inputs.length &&
-      inputs[inputs.length-1].value === "Download Documents"
+      inputs[inputs.length - 1].value === "Download Documents"
     return !!pageCheck
   },
 
@@ -195,8 +195,8 @@ let PACER = {
   isClaimsRegisterPage: function (url, document) {
     let headlines = [...document.getElementsByTagName('h2')]
     let pageCheck =
-      !!url.match(/\/SearchClaims\.pl\?/) 
-      && headlines.length > 0 
+      !!url.match(/\/SearchClaims\.pl\?/)
+      && headlines.length > 0
       && headlines[0].innerText.match(/Claims Register/)
     return pageCheck
   },
@@ -216,10 +216,10 @@ let PACER = {
 
 
     let pageCheck = (PACER.isDocumentUrl(url) &&
-                     hasImageReceipt &&
-                     (lastInput === 'View Document') ||
-                     (lastInput === 'Accept Charges and Retrieve'));
-    debug(4,` lastInput ${lastInput}`);
+      hasImageReceipt &&
+      (lastInput === 'View Document') ||
+      (lastInput === 'Accept Charges and Retrieve'));
+    debug(4, ` lastInput ${lastInput}`);
     return !!pageCheck;
   },
 
@@ -236,7 +236,7 @@ let PACER = {
 
   // Get the document ID for a document view page using the "View Document"
   // form.
-  getDocumentIdFromForm: function(url, document){
+  getDocumentIdFromForm: function (url, document) {
     if (PACER.isDocumentUrl(url)) {
       let inputs = document.getElementsByTagName('input');
       let last_input = inputs[inputs.length - 1];
@@ -268,11 +268,11 @@ let PACER = {
           // https://ecf.mad.uscourts.gov/cgi-bin/DktRpt.pl?caseNumber=1:17-cv-11842-PBS&caseId=1:17-cv-11842-PBS
           /[?&]caseid=(\d+)/i, // match on caseid GET param
           /\?(\d+)(?:&.*)?$/,  // match on DktRpt.pl?178502&blah urls
-        ]){
+        ]) {
           match = url.match(re);
-          if (match){
+          if (match) {
             debug(3, `Found caseid via: ${match[0]}`);
-            if (match[1] === '0'){
+            if (match[1] === '0') {
               // Appellate CMECF calls District CMECF with caseId=0 when it doesn't
               // know the caseid. Ignore that special case here.
               continue;
@@ -296,15 +296,15 @@ let PACER = {
     }
   },
 
-  getCaseNumberFromInputs: function(url, document){
-    if (PACER.isDocumentUrl(url)){
+  getCaseNumberFromInputs: function (url, document) {
+    if (PACER.isDocumentUrl(url)) {
       let inputs = document.getElementsByTagName('input');
-      let last_input = inputs[inputs.length -1];
+      let last_input = inputs[inputs.length - 1];
       if (inputs.length && last_input.value === "Download All") {
         // Attachment page.
         let onclick = last_input.getAttribute("onclick");
         let match = onclick.match(/[?&]caseid=(\d+)/i);
-        if (match && match[1] !== '0'){
+        if (match && match[1] !== '0') {
           return match[1];
         }
       } else if (inputs.length && last_input.value === "View Document") {
@@ -322,7 +322,7 @@ let PACER = {
   },
 
   // Parse the goDLS function returning its parameters as a dict.
-  parseGoDLSFunction: function (goDLS_string){
+  parseGoDLSFunction: function (goDLS_string) {
     // CMECF provides extra information on Document Links (DLS?) in the goDLS()
     // function of an onclick handler, e.g.:
     //
@@ -371,11 +371,11 @@ let PACER = {
       const onclickString = anchor.attributes.onclick.value;
       // find single quote five digits single quote followed by closing paren
       const caseId = onclickString.match(/\'\d{4,6}\'/)[0];
-      return caseId.replace(/\'/g,'');
+      return caseId.replace(/\'/g, '');
     }
   },
 
-  getCaseIdFromAppellateCaseQueryPage: function(inputs) {
+  getCaseIdFromAppellateCaseQueryPage: function (inputs) {
     // check the inputs for a value named caseid - present on case query page
     const input = inputs.find(input => input.name === 'caseid' && !!input.value);
     if (input) {
@@ -383,20 +383,12 @@ let PACER = {
     }
   },
 
-  getCaseIdFromAppellateUrl: function (url) {
-    // only return caseid if between 4 and 6 non-broken digits (can modify)
-    const matches = url.match(/caseid=\d{4,6}/);
-    if (matches[0]) {
-      return matches[0].replace('caseid=', '');
-    };
-  },
-  
   getCaseIdFromAppellateSearchResults: function (anchors) {
     // only return caseid if between 4 and 6 non-broken digits (can modify)
     const anchor = anchors.find(anchor => anchor.href.match(/caseid=\d{4,6}/));
     if (!!anchor) {
       const match = anchor.href.match(/caseid=\d{4,6}/)[0];
-      return match.replace('caseid=');
+      return match.replace('caseid=', '');
     }
   },
   // These are all the supported PACER court identifiers, together with their

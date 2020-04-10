@@ -80,6 +80,19 @@ describe('The AppellateDelegate class', function () {
       expect(ad.pacerDocId).toBe(undefined);
     });
 
+    describe('it is not on any identified appellate page', () => {
+
+      beforeEach(() => {
+        setTitle('');
+        ad = new AppellateDelegate({ tabId: tabId, court: court, links: [], pacerDocId: undefined });
+      });
+
+      it('has no targetPage set', () => {
+        expect(ad.targetPage).not.toBeTruthy();
+      });
+
+    });
+
     describe('it is on a caseSearchPage', () => {
       let ad;
       beforeEach(() => {
@@ -239,4 +252,78 @@ describe('The AppellateDelegate class', function () {
 
     });
   });
+
+  describe('when handleDocketPage has been called', () => {
+    let ad;
+
+    beforeEach(() => {
+      const anchor = document.createElement('a');
+      anchor.setAttribute('title', 'Open Document');
+      anchor.setAttribute('onclick', 'return doDocPostURL(\'00107526453\', \'45846\' )');
+      document.querySelector('body').appendChild(anchor);
+      ad = new AppellateDelegate({ tabId: tabId, court: court, links: [], pacerDocId: undefined });
+      spyOn(ad, 'checkForAndUploadOpinion').and.callThrough();
+      spyOn(ad.recap, 'uploadAppellatePage').and.callFake((params, callback) => {
+        callback.tab = { id: 1234 };
+        callback(true);
+      });
+      spyOn(history, 'replaceState').and.callThrough();
+      spyOn(ad.notifier, 'showUpload').and.callFake((message, callback) => {
+        callback(true);
+      });
+    });
+
+    afterEach(() => {
+      document.querySelector('a[title="Open Document"]').remove();
+    });
+
+    it('calls checkForAndUploadOpinion', async () => {
+      await ad.handleDocketPage();
+      expect(ad.checkForAndUploadOpinion).toHaveBeenCalledWith({ pacerCaseId: '45846' });
+    });
+
+    describe('the page has already been uploaded', () => {
+
+      beforeEach(() => {
+        history.replaceState({ uploaded: true }, '');
+      });
+
+      afterEach(() => {
+        history.replaceState({}, '');
+      });
+      it('does nothing', async () => {
+        await ad.handleDocketPage();
+        expect(ad.recap.uploadAppellatePage).not.toHaveBeenCalled();
+      });
+
+    });
+
+    describe('recap is not enabled', () => {
+      let existingGet;
+      beforeEach(() => {
+        existingGet = window.chrome.storage.local.get;
+        window.chrome.storage.local.get = jasmine.createSpy().and.returnValue({ options: { recap_enabled: false } });
+      });
+
+      afterEach(() => {
+        window.chrome.storage.local.get = existingGet;
+      });
+
+      it('should do nothing', async () => {
+        expect(ad.recap.uploadAppellatePage).not.toHaveBeenCalled();
+      });
+    });
+
+    it('calls uploadAppellatePage', async () => {
+      await ad.handleDocketPage();
+      expect(ad.recap.uploadAppellatePage).toHaveBeenCalled();
+    });
+
+    it('should dispatch the notifier', async () => {
+      await ad.handleDocketPage();
+      expect(ad.notifier.showUpload).toHaveBeenCalled();
+    });
+
+  });
+
 });
