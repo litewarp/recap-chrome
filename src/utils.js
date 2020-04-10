@@ -66,20 +66,20 @@ function importInstance(constructor) {
     (function (verb) {
       sender[verb] = function () {
         var args = Array.prototype.slice.call(arguments, 0, -1);
-        var cb = arguments[arguments.length - 1] || function () {};
+        var cb = arguments[arguments.length - 1] || function () { };
         if (typeof cb !== 'function') {
           throw 'Service invocation error: last argument is not a callback';
         }
         var unpack = function (results) { cb.apply(null, results); };
         chrome.runtime.sendMessage(
-          {name: name, verb: verb, args: args}, unpack);
+          { name: name, verb: verb, args: args }, unpack);
       };
     })(verb);
   }
   return sender;
 }
 
-function getHostname(url){
+function getHostname(url) {
   // Extract the hostname from a URL.
   return $('<a>').prop('href', url).prop('hostname');
 }
@@ -130,7 +130,7 @@ const N87GC2 = "45c7946dd8400ad62662565cf79da3c081d9b0e5"
 
 // helper functions for chrome local storage
 
-const checkForOpenerTabId = () =>  new Promise(resolve => {
+const checkForOpenerTabId = () => new Promise(resolve => {
   chrome.runtime.sendMessage(
     { message: 'requestOpenerTabId' },
     (msg) => resolve(msg)
@@ -145,14 +145,13 @@ const searchAllTabsForCaseId = async (docId) => {
   // iterate over storage and return if a caseId is found
   const map = storage.map(tabStorage => {
     // punt if the storage key is not a numerical tabId
-    console.log(!tabStorage.match(/^\d$/), tabStorage);
     if (!tabStorage.match(/^\d+$/)) { return; };
 
     // destructure the store
     const { docId, caseId, docsToCases } = tabStorage;
 
     // return the caseId if docsToCases has the docId
-    
+
     if (docsToCases.keys().includes(docId)) {
       return caseId;
     }
@@ -164,12 +163,11 @@ const searchAllTabsForCaseId = async (docId) => {
 };
 
 const getItemsFromStorage = (key) => new Promise((resolve, reject) => {
-  // tabId is a number, so we convert it to string
-  const item = (typeof key === 'number') ? key.toString() : key;
-  chrome.storage.local.get(item, result => {
-    resolve(result[item]);
-  });
-});
+  const stringKey = typeof key === 'number' ? key.toString() : key;
+  chrome.storage.local.get(stringKey, result => {
+    resolve(result[stringKey]);
+  })
+})
 
 const saveItemToStorage = (dataObj) => new Promise((resolve, reject) =>
   chrome.storage.local.set(
@@ -207,7 +205,7 @@ const updateTabStorage = async object => {
   const updatedVars = object[tabId];
   const store = await getItemsFromStorage(tabId);
   // keep store immutable
-  await saveItemToStorage({ [tabId]: { ...store, ...updatedVars } });
+  saveItemToStorage({ [tabId]: { ...store, ...updatedVars } });
 };
 
 // Default settings for any jquery $.ajax call.
@@ -232,8 +230,8 @@ $.ajaxSetup({
 
 // In Firefox, calls from the content script require content.fetch
 
-const contentScriptFetch = (navigator.userAgent.indexOf('Chrome') < 0) 
-  ? content.fetch 
+const contentScriptFetch = (navigator.userAgent.indexOf('Chrome') < 0)
+  ? content.fetch
   : window.fetch;
 
 const blobToDataURL = (blob) => {
@@ -246,7 +244,7 @@ const blobToDataURL = (blob) => {
 };
 
 const isChromeBrowserAndPdfViewerDisabled = () => (
-  (navigator.userAgent.indexOf('Chrome') >= 0) 
+  (navigator.userAgent.indexOf('Chrome') >= 0)
   && !navigator.plugins.namedItem('Chrome PDF Viewer')
 );
 
@@ -261,26 +259,26 @@ const generateFileName = async ({
 }) => {
 
   const iaStylePieces = [
-    'gov.uscourts', 
-    court, 
-    pacerCaseId || 'unknown-case-id', 
-    pacerDocId, 
+    'gov.uscourts',
+    court,
+    pacerCaseId || 'unknown-case-id',
+    pacerDocId,
     attachmentNumber || '0',
     suffix
   ];
 
   const lawyerStylePieces = [
-    PACER.COURT_ABBREVS[court], 
-    docketNumber, 
-    pacerDocId, 
+    PACER.COURT_ABBREVS[court],
+    docketNumber,
+    pacerDocId,
     attachmentNumber || '0',
     suffix
   ];
- 
+
   if (iaStyle) {
     return iaStylePieces.join('.');
   } else {
-    return lawyerStylePieces.join('_'); 
+    return lawyerStylePieces.join('_');
   }
 };
 
@@ -295,7 +293,7 @@ var DEBUGLEVEL = 1;
 function debug(level, varargs) {
   if (DEBUGLEVEL >= level) {
     var args = Array.prototype.slice.call(arguments, 1);
-    args[0] = `RECAP debug [${level}]: `+args[0];
+    args[0] = `RECAP debug [${level}]: ` + args[0];
     return console.log.apply(this, args);
   }
 }

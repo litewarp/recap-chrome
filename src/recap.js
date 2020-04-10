@@ -10,6 +10,7 @@ function Recap() {
       'DOCKET_HISTORY_REPORT': 4,
       'APPELLATE_DOCKET': 5,
       'APPELLATE_ATTACHMENT_PAGE': 6,
+      'CLAIMS_REGISTER_PAGE': 9,
       'ZIP': 10,
     },
     APPELLATE_UPLOAD_TYPES = {
@@ -24,16 +25,17 @@ function Recap() {
 
     //Given a pacer_doc_id, return the pacer_case_id that it is associated with
     getPacerCaseIdFromPacerDocId: async function (pacer_doc_id, cb) {
-      const tabId = cb.tab.id
+      const tabId = cb.tab.id;
       const tabStore = await getItemsFromStorage(tabId);
       try {
-        const pacerCaseId = tabStore[pacer_doc_id];
+        const docsToCases = tabStore.docsToCases;
+        const pacerCaseId = docsToCases[pacer_doc_id];
         console.info([
           'RECAP: Got case number', pacerCaseId,
           'for pacer_doc_id:', pacer_doc_id].join(' ')
         );
         return cb(pacerCaseId);
-      } catch(err) {
+      } catch (err) {
         console.log('No stored pacer_case_id found in chrome storage');
         return cb(null);
       };
@@ -100,7 +102,7 @@ function Recap() {
       formData.append('court', PACER.convertToCourtListenerCourt(pacer_court));
       pacer_case_id && formData.append('pacer_case_id', pacer_case_id);
       formData.append('upload_type', UPLOAD_TYPES[upload_type]);
-      formData.append('filepath_local', new Blob([html], {type: 'text/plain'}));
+      formData.append('filepath_local', new Blob([html], { type: 'text/plain' }));
       formData.append('debug', DEBUG);
       $.ajax({
         url: `${SERVER_ROOT}recap/`,
@@ -130,7 +132,7 @@ function Recap() {
       // have it.
       pacer_case_id && formData.append('pacer_case_id', pacer_case_id);
       formData.append('upload_type', UPLOAD_TYPES['ATTACHMENT_PAGE']);
-      formData.append('filepath_local', new Blob([html], {type: 'text/html'}));
+      formData.append('filepath_local', new Blob([html], { type: 'text/html' }));
       formData.append('debug', DEBUG);
       $.ajax({
         url: `${SERVER_ROOT}recap/`,
@@ -162,7 +164,7 @@ function Recap() {
     ) => {
       console.info([
         `RECAP: Attempting PDF upload to RECAP Archive with details:`,
-        `pacer_court:   ${pacer_court}`,
+        `pacer_court: ${pacer_court}`,
         `pacer_case_id: ${pacer_case_id}`,
         `pacer_doc_id: ${pacer_doc_id}`,
         `document_number: ${document_number},`,
@@ -174,7 +176,7 @@ function Recap() {
       getItemsFromStorage(cb.tab.id)
         .then(async (tabStorage) => {
           // create form data
-          const blob = await fetch(tabStorage['pdf_blob']).then(res => res.blob())
+          const blob = await fetch(tabStorage['pdf_blob']).then(res => res.blob());
           let formData = new FormData();
           formData.append('court', PACER.convertToCourtListenerCourt(pacer_court));
           pacer_case_id && formData.append('pacer_case_id', pacer_case_id);
@@ -186,15 +188,15 @@ function Recap() {
           formData.append('filepath_local', blob);
           formData.append('upload_type', UPLOAD_TYPES['PDF']);
           formData.append('debug', DEBUG);
-          return formData
+          return formData;
         })
         .then(data => fetch(`${SERVER_ROOT}recap/`, {
           method: 'POST',
           body: data,
-          headers: { 'Authorization': `Token ${N87GC2}`}
+          headers: { 'Authorization': `Token ${N87GC2}` }
         }))
         .then(res => res.json())
-        .then( result => {
+        .then(result => {
           console.info(`RECAP: Successfully uploaded PDF: 'Success' ` +
             `with processing queue id of ${result.id}`);
           cb(result || null);
@@ -219,8 +221,8 @@ function Recap() {
       // wait for chrome.storage.local to load the tabStorage
       getItemsFromStorage(cb.tab.id)
         .then(async (tabStorage) => {
-          const docId = tabStorage['docId']
-          const blob = await fetch(tabStorage['zip_blob']).then(res => res.blob())
+          const docId = tabStorage['docId'] === 'undefined' ? null : tabStorage['docId'];
+          const blob = await fetch(tabStorage['zip_blob']).then(res => res.blob());
           // create the formData
           const formData = new FormData();
           formData.append('court', PACER.convertToCourtListenerCourt(pacer_court));
@@ -234,18 +236,18 @@ function Recap() {
         .then(data => fetch(`${SERVER_ROOT}recap/`, {
           method: 'POST',
           body: data,
-          headers: {'Authorization': `Token ${N87GC2}`}
+          headers: { 'Authorization': `Token ${N87GC2}` }
         }))
         .then(res => res.json())
         .then(result => {
           console.info(`RECAP: Successfully uploaded Zip: 'Success' ` +
-          `with processing queue id of ${result.id}`);
+            `with processing queue id of ${result.id}`);
           cb(result || null);
           destroyTabStorage(cb.tab.id);
         })
         .catch(error => console.log(`RECAP: Error uploading Zip: ${error}`));
     },
-    
+
     uploadAppellatePage: async (params, callback) => {
       const { htmlPage, uploadType, pacerCourt, pacerCaseId, pacerDocId } = params;
       console.info([
@@ -255,32 +257,32 @@ function Recap() {
         `pacerDocId: ${pacerDocId}`
       ].join(' '));
 
-      const html = new Blob([htmlPage], { type: 'text/html'} );
+      const html = new Blob([htmlPage], { type: 'text/html' });
       const formData = new FormData();
       formData.append('court', PACER.convertToCourtListenerCourt(pacerCourt));
       pacerCaseId && formData.append('pacer_case_id', pacerCaseId);
       pacerDocId && formData.append('pacer_doc_id', pacerDocId);
       formData.append('upload_type', APPELLATE_UPLOAD_TYPES[uploadType]);
       formData.append('debug', DEBUG);
-      formData.append('filepath_local', html )
-      
+      formData.append('filepath_local', html)
+
       const response = await fetch(`${SERVER_ROOT}recap/`, {
         method: 'POST',
         body: formData,
-        headers: {'Authorization': `Token ${N87GC2}`}
+        headers: { 'Authorization': `Token ${N87GC2}` }
       });
       if (response.ok) {
         console.info(`RECAP: Successfully uploaded Appellate Page of type ${uploadType}`);
         callback(response.json());
         destroyTabStorage(callback.tab.id);
       } else {
-        console.error(`RECAP: Failed to upload Appellate Page of type ${uploadType} `)
+        console.error(`RECAP: Failed to upload Appellate Page of type ${uploadType} `);
         callback(null);
       }
     },
-    
+
     uploadAppellateDocument: async (params, callback) => {
-      const {  court, pacerCaseId, pacerDocId } = params;
+      const { court, pacerCaseId, pacerDocId } = params;
       const uploadType = 'PDF';
       console.info([
         `RECAP: Attempting to upload Appellate Page of type ${uploadType} with details:`,
@@ -288,7 +290,7 @@ function Recap() {
         `pacerCaseId: ${pacerCaseId}`,
         `pacerDocId: ${pacerDocId}`
       ].join(' '));
-      
+
       const tabStorage = await getItemsFromStorage(callback.tab.id);
       const blob = await fetch(tabStorage.pdfBlob).then(res => res.blob());
 
@@ -300,20 +302,46 @@ function Recap() {
       formData.append('upload_type', APPELLATE_UPLOAD_TYPES['PDF']);
       formData.append('debug', DEBUG);
       formData.append('filepath_local', blob);
-    
+
       const response = await fetch(`${SERVER_ROOT}recap/`, {
         method: 'POST',
         body: formData,
-        headers: {'Authorization': `Token ${N87GC2}`}
+        headers: { 'Authorization': `Token ${N87GC2}` }
       });
       if (response.ok) {
-        console.info('RECAP: Successfully uploaded PDF to the public RECAP archive');
+        console.info(
+          `RECAP: Successfully uploaded PDF to the public RECAP archive with processing queue id of ${result.id}`
+        );
         callback(response.json());
         destroyTabStorage(callback.tab.id);
       } else {
         console.error('RECAP: Failed to upload PDF to public RECAP archive');
         callback(null);
       };
+    },
+
+    uploadClaimsRegister: async function (pacerCourt, pacerCaseId, claimsPageHtml, cb) {
+      const html = new Blob([claimsPageHtml], { type: 'text/html' });
+      const formData = new FormData();
+      formData.append('pacer_case_id', pacerCaseId);
+      formData.append('court', PACER.convertToCourtListenerCourt(pacerCourt));
+      formData.append('upload_type', UPLOAD_TYPES['CLAIMS_REGISTER_PAGE']);
+      formData.append('filepath_local', html);
+      const fetchOptions = {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Token ${N87GC2}`
+        }
+      };
+
+      fetch(`${SERVER_ROOT}recap/`, fetchOptions)
+        .then(res => res.json())
+        .then(result => {
+          console.log(`RECAP: Claims Page uploaded successfully with processing queue id of ${result.id}`);
+          cb(result || null);
+        })
+        .catch(error => console.log(`RECAP: The following error occurred: ${error}`));
     }
   };
 }

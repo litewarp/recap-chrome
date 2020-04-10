@@ -54,6 +54,7 @@ getTabIdForContentScript().then(({ tabId }) => {
       // If this page offers a single document, ask RECAP whether it has the document.
       content_delegate.handleSingleDocumentPageCheck();
 
+<<<<<<< HEAD
       // If this page offers a single document, intercept navigation to the document
       // view page.  The "View Document" button calls the goDLS() function, which
       // creates a <form> element and calls submit() on it, so we hook into submit().
@@ -65,5 +66,15 @@ getTabIdForContentScript().then(({ tabId }) => {
     } else {
       console.info(`RECAP: Taking no actions because not logged in: ${url}`);
     }
+=======
+    // If this is a Clams Register, we upload it to RECAP
+    content_delegate.handleClaimsPageView();
+
+    // Check every link in the document to see if there is a free RECAP document
+    // available. If there is, put a link with a RECAP icon.
+    content_delegate.attachRecapLinkToEligibleDocs();
+  } else {
+    console.info(`RECAP: Taking no actions because not logged in: ${url}`);
+>>>>>>> 117_and_235
   }
 });

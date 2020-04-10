@@ -15,8 +15,9 @@ class AppellateDelegate {
   // currently only implements head title check
   setTargetPage() {
     // check the document head for a title
-    const title = !!document.head.textContent
-      ? document.head.querySelector('title').text.trim()
+    const titleElement = document.querySelector('title');
+    const title = titleElement
+      ? titleElement.text.trim()
       : '';
     // return page name depending on match
     if (title === 'Case Search') {
@@ -52,58 +53,58 @@ class AppellateDelegate {
   };
 
   // dispatch associated handler
-  dispatchTargetHandler(){
+  dispatchTargetHandler() {
     if (this.targetPage === 'caseQuery') {
       this.handleCaseQueryPage();
     } else if (this.targetPage === 'caseSearchResults') {
       this.handleCaseSearchResultsPage();
-    } else if (this.targetPage === 'downloadConfirmation') { 
+    } else if (this.targetPage === 'downloadConfirmation') {
       this.handleDownloadConfirmationPage();
     } else if (this.targetPage === 'attachmentMenu') {
       this.handleAttachmentMenuPage();
-    } else if (this.targetPage === 'fullDocketSearch') { 
+    } else if (this.targetPage === 'fullDocketSearch') {
       this.handleFullDocketSearchPage();
     } else if (this.targetPage === 'caseSearch' || this.targetPage === 'advancedCaseSearch') {
       this.handleCaseSearchPage();
     } else if (this.targetPage === 'fullDocket' || this.targetPage === 'shortDocket') {
       this.handleDocketPage();
-    }   
+    }
   };
 
   // unclear if needed
-  handleCaseSearchPage(){
+  handleCaseSearchPage() {
     console.log('handleCaseSearchPage');
   };
 
   // unclear if needed
-  handleFullDocketSearchPage(){
+  handleFullDocketSearchPage() {
     console.log('handleFullDocketSearchPage')
   };
 
-  async handleCaseSearchResultsPage(){
+  async handleCaseSearchResultsPage() {
     console.log('handleCaseSearchResults');
     const anchors = [...document.querySelectorAll('a')];
     const pacerCaseId = PACER.getCaseIdFromAppellateSearchResults(anchors);
-    if (pacerCaseId){
+    if (pacerCaseId) {
       await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId } });
     };
   };
 
-  async handleCaseQueryPage(){
+  async handleCaseQueryPage() {
     console.log('handleCaseQuery')
     const inputs = [...document.querySelectorAll('input')];
     const pacerCaseId = PACER.getCaseIdFromAppellateCaseQueryPage(inputs);
     if (pacerCaseId) {
-      await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId }});
+      await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId } });
     };
-    
+
     // don't upload more than once per session
     if (history.state && history.state.uploaded) { return; };
-    
+
     // don't upload if the user disabled the option
     const options = await getItemsFromStorage('options');
     if (options.recap_enabled === false) { return; };
-    
+
     // set params for upload
     const params = {
       pacerCaseId: pacerCaseId,
@@ -111,7 +112,7 @@ class AppellateDelegate {
       uploadType: 'CASE_QUERY',
       pacerCourt: this.court,
     };
-    
+
     this.recap.uploadAppellatePage(
       params,
       // send a callback for now to mimic contentDelegate
@@ -119,7 +120,7 @@ class AppellateDelegate {
         history.replaceState({ uploaded: true }, '');
         this.notifier.showUpload(
           'Case query page uploaded to the public RECAP Archive',
-          () => {}
+          () => { }
         );
       }
     );
@@ -131,64 +132,64 @@ class AppellateDelegate {
     // check if this tab was opened by another and use that tabId
     // to get the relevant tabStorage
     const { openerTabId } = await checkForOpenerTabId();
-    const tabId = openerTabId ? openerTabId : this.tabId; 
+    const tabId = openerTabId ? openerTabId : this.tabId;
     const tabStorage = await getItemsFromStorage(tabId);
 
     // don't upload more than once per session
     if (history.state && history.state.uploaded) { return; };
-    
+
     // don't upload if the user disabled the option
     const options = await getItemsFromStorage('options');
     if (options.recap_enabled === false) { return; };
-    
+
     const params = {
       pacerCourt: this.court,
       pacerCaseId: tabStorage && tabStorage.caseId,
       htmlPage: document.documentElement.outerHTML,
       uploadType: 'ATTACHMENT_PAGE',
     };
-    
+
     this.recap.uploadAppellatePage(
       params,
       (response) => {
         history.replaceState({ uploaded: true }, '');
         this.notifier.showUpload(
           'Attachment page uploaded to the public RECAP Archive',
-          () => {}
+          () => { }
         );
       }
     );
   };
 
-  async handleDocketPage(){
+  async handleDocketPage() {
     console.log('handleDocketPage')
-  
+
     // set pacerCaseId for pages down the line
     const anchors = [...document.querySelectorAll('a')];
     const pacerCaseId = PACER.getCaseIdFromAppellateDocketPage(anchors);
     if (pacerCaseId) {
-      await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId }});
+      await updateTabStorage({ [this.tabId]: { caseId: pacerCaseId } });
     };
 
     // since opinions may be public we try to grab it
     // if (recapDoesNotHaveOpinion) {
-    this.checkForAndUploadOpinion({pacerCaseId});
+    this.checkForAndUploadOpinion({ pacerCaseId });
     // };
 
     // don't upload more than once per session
     if (history.state && history.state.uploaded) { return; };
-    
+
     // don't upload if the user disabled the option
     const options = await getItemsFromStorage('options');
     if (options.recap_enabled === false) { return; };
-    
-    const params = { 
+
+    const params = {
       pacerCaseId,
       htmlPage: document.documentElement.outerHTML,
       uploadType: this.targetPage === 'fullDocket' ? 'FULL_DOCKET' : 'SHORT_DOCKET',
       pacerCourt: this.court,
     };
-    
+
     // upload page through recap instance
     this.recap.uploadAppellatePage(
       params,
@@ -196,7 +197,7 @@ class AppellateDelegate {
         history.replaceState({ uploaded: true }, '');
         this.notifier.showUpload(
           'Docket page uploaded to the public RECAP Archive',
-          () => {}
+          () => { }
         );
       }
     );
@@ -229,7 +230,7 @@ class AppellateDelegate {
     // 1.  make the back button display the previous page //
     window.onpopstate = ({ state }) => {
       if (state.content) {
-        document.documentElement.innerHTML = state.content; 
+        document.documentElement.innerHTML = state.content;
       }
     };
     history.replaceState({ content: document.documentElement.innerHTML }, '');
@@ -245,22 +246,22 @@ class AppellateDelegate {
     const formData = { ...inputData, recp: new Date().getTime() };
 
     // 3. encode the params as URL search params to match the pacer request
-    const url = this.buildSearchParamsUrl({ url: event.data, params: formData }); 
+    const url = this.buildSearchParamsUrl({ url: event.data, params: formData });
 
     // 4. get the blob and store it
     const blob = await contentScriptFetch(url).then(res => res.blob());
     const dataUrl = await blobToDataURL(blob);
-    await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl }});
+    await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl } });
 
     // 5. build the innerHtml to show the user
-    
+
     // set the params before you set the new innerHTML
     const params = {
       pacerCaseId: formData.caseId,
       pacerDocId: formData.dls_id,
       court: this.court,
     };
-   
+
     // get needed info to build the filename
     const options = await getItemsFromStorage('options');
     const td = [...document.querySelectorAll('td')].find(
@@ -284,16 +285,16 @@ class AppellateDelegate {
       // create an iframe to display the pdf
       const iframe = document.createElement('iframe');
       iframe.src = URL.createObjectURL(blob);
-      iframe.setAttribute('height','100%');
+      iframe.setAttribute('height', '100%');
       iframe.setAttribute('width', '100%');
       iframe.style = 'border: none';
-      
+
       // insert it into a body and set the style
       const body = document.createElement('body');
       body.style.margin = 0;
       body.style.height = '100vh';
       body.appendChild(iframe);
-      
+
       // insert it into a top-level html element
       const html = document.createElement('html');
       html.appendChild(body);
@@ -301,25 +302,25 @@ class AppellateDelegate {
       // swap the current documentElement with our new one
       document.documentElement.innerHTML = html.innerHTML;
       // let the browser know we've 'gone forward' a page
-      history.pushState({ content: html.innerHTML}, '');
+      history.pushState({ content: html.innerHTML }, '');
     };
 
     // 6. upload it to recap
     this.recap.uploadAppellateDocument(
-      params, 
+      params,
       (response) => {
         history.replaceState({ uploaded: true }, '');
         this.notifier.showUpload(
           'PDF page uploaded to the public RECAP Archive',
-          () => {}
+          () => { }
         );
       }
-    ); 
+    );
   };
 
   // private methods - add private before release
   // can't add private now because of eslint issue 
-  
+
   // convert formdata to url search params
   // see https://fetch.spec.whatwg.org/#fetch-api
   buildSearchParamsUrl({ url, params }) {
@@ -327,10 +328,10 @@ class AppellateDelegate {
     Object.keys(params).forEach(key => newUrl.searchParams.append(key, params[key]));
     return newUrl;
   };
-  
+
   // check if the opinion is free to download and if so
   // fetch it and upload it to recap in the background
-  async checkForAndUploadOpinion({ pacerCaseId }){
+  async checkForAndUploadOpinion({ pacerCaseId }) {
     const trs = [...document.querySelectorAll('tr')]
     const opinionTr = trs.find(tr => {
       if ([...tr.children].length > 0) {
@@ -349,7 +350,7 @@ class AppellateDelegate {
         dktType: 'dktPublic',
       };
       // encode the params as URL params
-      const url = new URL(document.URL.replace(/\?.*$/,''));
+      const url = new URL(document.URL.replace(/\?.*$/, ''));
       Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
 
       const blob = await contentScriptFetch(url).then(res => {
@@ -365,17 +366,17 @@ class AppellateDelegate {
       if (blob.type.includes('pdf')) {
         // upload it to recap
         const dataUrl = await blobToDataURL(blob);
-        await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl }});
+        await updateTabStorage({ [this.tabId]: { pdfBlob: dataUrl } });
         this.recap.uploadAppellateDocument(
-          fetchParams, 
+          fetchParams,
           (response) => {
             this.notifier.showUpload(
               'Case Opinion automatically uploaded to the public RECAP Archive',
-              () => {}
+              () => { }
             );
             // insert available for free tag on item
           }
-        ); 
+        );
       }
     }
   }
