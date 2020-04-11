@@ -190,6 +190,7 @@ class AppellateDelegate {
       pacerCourt: this.court,
     };
 
+    console.log('made it to upload appellate page!')
     // upload page through recap instance
     this.recap.uploadAppellatePage(
       params,
