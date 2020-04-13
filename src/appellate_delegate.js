@@ -186,11 +186,13 @@ class AppellateDelegate {
     const params = {
       pacerCaseId,
       htmlPage: document.documentElement.outerHTML,
-      uploadType: this.targetPage === 'fullDocket' ? 'FULL_DOCKET' : 'SHORT_DOCKET',
+      uploadType: this.targetPage === 'fullDocket'
+        ? 'FULL_DOCKET'
+        : 'SHORT_DOCKET',
       pacerCourt: this.court,
     };
 
-    console.log('made it to upload appellate page!')
+    console.log('made it to upload appellate page!');
     // upload page through recap instance
     this.recap.uploadAppellatePage(
       params,
@@ -326,23 +328,25 @@ class AppellateDelegate {
   // see https://fetch.spec.whatwg.org/#fetch-api
   buildSearchParamsUrl({ url, params }) {
     const newUrl = new URL(url);
-    Object.keys(params).forEach(key => newUrl.searchParams.append(key, params[key]));
+    Object.keys(params).forEach(
+      key => newUrl.searchParams.append(key, params[key])
+    );
     return newUrl;
   };
 
   // check if the opinion is free to download and if so
   // fetch it and upload it to recap in the background
   async checkForAndUploadOpinion({ pacerCaseId }) {
-    const trs = [...document.querySelectorAll('tr')]
+    const trs = [...document.querySelectorAll('tr')];
     const opinionTr = trs.find(tr => {
       if ([...tr.children].length > 0) {
         const match = [...tr.children].find(
-          td => (td.textContent.match(/OPINION/) && td.width === "90%")
+          td => (td.textContent.match(/OPINION/) && td.width === '90%')
         );
         if (match) { return true; };
       }
     });
-    const link = opinionTr.querySelector('a');
+    const link = opinionTr && opinionTr.querySelector('a');
     if (link) {
       const params = {
         caseId: pacerCaseId,
@@ -352,7 +356,9 @@ class AppellateDelegate {
       };
       // encode the params as URL params
       const url = new URL(document.URL.replace(/\?.*$/, ''));
-      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+      Object.keys(params).forEach(
+        key => url.searchParams.append(key, params[key])
+      );
 
       const blob = await contentScriptFetch(url).then(res => {
         return res.blob();

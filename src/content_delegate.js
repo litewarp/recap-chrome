@@ -708,7 +708,7 @@ ContentDelegate.prototype.onDownloadAllSubmit = async function (event) {
   };
   history.replaceState({ content: document.documentElement.innerHTML }, '');
   // tell the user to wait
-  $("body").css("cursor", "wait");
+  document.querySelector('body').className += 'cursor wait';
 
   // in Firefox, use content.fetch for content-specific fetch requests
   // https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Content_scripts#XHR_and_Fetch
@@ -716,7 +716,7 @@ ContentDelegate.prototype.onDownloadAllSubmit = async function (event) {
 
   // fetch the html page which contains the <iframe> link to the zip document.
   const htmlPage = await browserSpecificFetch(event.data.id).then(res => res.text());
-  console.log("RECAP: Successfully submitted zip file request");
+  console.log('RECAP: Successfully submitted zip file request');
   const zipUrl = extractUrl(htmlPage);
   //download zip file and save it to chrome storage
   const blob = await fetch(zipUrl).then(res => res.blob());
@@ -733,7 +733,7 @@ ContentDelegate.prototype.onDownloadAllSubmit = async function (event) {
   const pacerCaseId = (event.data.id).match(/caseid\=\d*/)[0].replace(/caseid\=/, "");
 
   // load options
-  const options = await getItemsFromStorage('options')
+  const options = await getItemsFromStorage('options');
   // generate the filename
   const filename = generateFileName(options, pacerCaseId);
 
@@ -749,7 +749,7 @@ ContentDelegate.prototype.onDownloadAllSubmit = async function (event) {
           const htmlBody = stringToDocBody(htmlPage);
           const frame = htmlBody.querySelector('iframe');
           frame.insertAdjacentHTML('beforebegin', link);
-          frame.src = "";
+          frame.src = '';
           frame.onload = () => document.getElementById('recap-download').click();
           document.body = htmlBody;
           history.pushState({ content: document.body.innerHTML }, '');
@@ -768,22 +768,15 @@ ContentDelegate.prototype.handleZipFilePageView = function () {
     return;
   }
 
-  // return if on the appellate courts
-  if (PACER.isAppellateCourt(this.court)) {
-    debug(4, "No interposition for appellate downloads yet");
-    return;
-  }
-
-  // extract the url from the onclick attribute from one of the two
-  // "Download Documents" buttons
-  const inputs = [...document.getElementsByTagName("input")];
-  const targetInput = inputs.find(
-    input => input.type === "button" && input.value === "Download Documents"
+  // extract url from the onclick attribute from a "Download Documents" button
+  const targetInput = document.querySelector(
+    'input[type="button"][value="Download Documents"]'
   );
+
   const url = targetInput
-    .getAttribute("onclick")
-    .replace(/p.*\//, "") // remove parent.location='/cgi-bin/
-    .replace(/\'(?=$)/, ""); // remove endquote
+    .getAttribute('onclick')
+    .replace(/p.*\//, '') // remove parent.location='/cgi-bin/
+    .replace(/\'(?=$)/, ''); // remove endquote
 
   // imperatively manipulate hte dom elements without injecting a script
   const forms = [...document.querySelectorAll('form')];
@@ -795,7 +788,7 @@ ContentDelegate.prototype.handleZipFilePageView = function () {
   // When we receive the message from the above submit method, submit the form
   // via fetch so we can get the document before the browser does.
   window.addEventListener(
-    "message",
+    'message',
     this.onDownloadAllSubmit.bind(this),
     false
   );
@@ -821,7 +814,7 @@ ContentDelegate.prototype.handleClaimsPageView = function () {
       if (ok) {
         this.notifier.showUpload('Claims page uploaded to the public RECAP Archive', () => { });
       } else {
-        console.error("Page not uploaded to the public RECAP archive.");
+        console.error('Page not uploaded to the public RECAP archive.');
       }
     }
   );

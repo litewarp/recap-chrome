@@ -9,7 +9,7 @@
       "request": "attach",
       "name": "Launch Chrome against localhost",
       "port": 9222,
-      "url": "http://localhost:9876",
+      "url": "http://localhost",
       "webRoot": "${workspaceFolder/src}"
     }
   ]
