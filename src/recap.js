@@ -44,6 +44,10 @@ function Recap() {
     // Asks RECAP whether it has a docket page for the specified case.  If it
     // is available, the callback will be called with a
     getAvailabilityForDocket: function (pacer_court, pacer_case_id, cb) {
+      if (!pacer_case_id){
+        console.error("RECAP: Cannot get availability of docket without pacer_case_id.");
+        return;
+      }
       console.info(`RECAP: Getting availability of docket ${pacer_case_id} at ` +
         `${pacer_court}`);
       $.ajax({
@@ -221,13 +225,13 @@ function Recap() {
       // wait for chrome.storage.local to load the tabStorage
       getItemsFromStorage(cb.tab.id)
         .then(async (tabStorage) => {
-          const docId = tabStorage['docId'] === 'undefined' ? null : tabStorage['docId'];
+          const docId = (tabStorage.docId && tabStorage.docId !== 'undefined') ? tabStorage.docId : null;
           const blob = await fetch(tabStorage['zip_blob']).then(res => res.blob());
           // create the formData
           const formData = new FormData();
           formData.append('court', PACER.convertToCourtListenerCourt(pacer_court));
           pacer_case_id && formData.append('pacer_case_id', pacer_case_id);
-          formData.append('pacer_doc_id', docId);
+          docId && formData.append('pacer_doc_id', docId);
           formData.append('upload_type', UPLOAD_TYPES['ZIP']);
           formData.append('debug', DEBUG);
           formData.append('filepath_local', blob);
@@ -242,10 +246,13 @@ function Recap() {
         .then(result => {
           console.info(`RECAP: Successfully uploaded Zip: 'Success' ` +
             `with processing queue id of ${result.id}`);
-          cb(result || null);
+          cb(result);
           destroyTabStorage(cb.tab.id);
         })
-        .catch(error => console.log(`RECAP: Error uploading Zip: ${error}`));
+        .catch(error => {
+          cb(null);
+          console.log(`RECAP: Error uploading Zip: ${error}`);
+        });
     },
 
     uploadAppellatePage: async (params, callback) => {
