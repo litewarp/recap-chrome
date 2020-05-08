@@ -39,37 +39,6 @@
     ]
   },
   "content_scripts": [{
-<<<<<<< HEAD
-      "matches": ["*://*.uscourts.gov/*"],
-      "include_globs": ["*://ecf.*", "*://ecf-train.*", "*://pacer.*"],
-      "css": [
-        "assets/css/style.css", 
-        "assets/css/font-awesome.css"
-      ],
-      "js": [
-        "assets/js/jquery.js",
-        "assets/js/FileSaver.js",
-        "assets/js/moment.js",
-        "assets/js/livestamp.js",
-        "assets/js/bootstrap.bundle.js",
-        "utils.js",
-        "notifier.js",
-        "toolbar_button.js",
-        "pacer.js",
-        "recap.js",
-        "content_delegate.js",
-        "appellate_delegate.js",
-        "content.js"
-      ],
-      "run_at": "document_end"
-    }, {
-      "matches": ["https://www.courtlistener.com/*"],
-      "js": [
-        "install_notifier.js"
-      ],
-      "run_at": "document_idle"
-    }],
-=======
     "matches": ["*://*.uscourts.gov/*"],
     "include_globs": ["*://ecf.*", "*://ecf-train.*", "*://pacer.*"],
     "css": [
@@ -98,7 +67,6 @@
     ],
     "run_at": "document_idle"
   }],
->>>>>>> 117_and_235
   "browser_action": {
     "default_icon": {
       "19": "assets/images/grey-19.png",
