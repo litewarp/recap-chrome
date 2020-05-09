@@ -789,17 +789,6 @@ ContentDelegate.prototype.handleZipFilePageView = function () {
     return;
   }
 
-<<<<<<< HEAD
-  // extract url from the onclick attribute from a "Download Documents" button
-  const targetInput = document.querySelector(
-    'input[type="button"][value="Download Documents"]'
-  );
-
-  const url = targetInput
-    .getAttribute('onclick')
-    .replace(/p.*\//, '') // remove parent.location='/cgi-bin/
-    .replace(/\'(?=$)/, ''); // remove endquote
-=======
   // return if on the appellate courts
   if (PACER.isAppellateCourt(this.court)) {
     debug(4, "No interposition for appellate downloads yet");
@@ -816,7 +805,6 @@ ContentDelegate.prototype.handleZipFilePageView = function () {
     .getAttribute("onclick")
     .replace(/p.*\//, "") // remove parent.location='/cgi-bin/
     .replace(/\'(?=$)/, ""); // remove endquote
->>>>>>> master
 
   // imperatively manipulate hte dom elements without injecting a script
   const forms = [...document.querySelectorAll('form')];
