@@ -14,8 +14,15 @@
 //  onDownloadAllSubmit
 //  handleZipFilePageView
 
-let ContentDelegate = function (tabId, url, path, court, pacer_case_id, pacer_doc_id,
-  links) {
+const ContentDelegate = (
+  tabId,
+  url,
+  path,
+  court,
+  pacer_case_id,
+  pacer_doc_id,
+  links
+) => {
   this.tabId = tabId;
   this.url = url;
   this.path = path;
@@ -72,14 +79,14 @@ ContentDelegate.prototype.checkRestrictions = function () {
   let restrictedDoc = false;
 
   for (let td of
-    document.querySelectorAll("table td:first-child")) {
+    document.querySelectorAll('table td:first-child')) {
     if (td.textContent.match(/Warning!/)) {
       restrictedDoc = true;
       break;
     }
   }
 
-  for (let td of document.querySelectorAll("b")) {
+  for (let td of document.querySelectorAll('b')) {
     if (td.textContent.match(
       /document is restricted|SEALED|do not allow it to be seen/i
     )) {
@@ -89,7 +96,7 @@ ContentDelegate.prototype.checkRestrictions = function () {
   }
 
   if (restrictedDoc) {
-    console.log("RECAP: Restricted document detected. Skipping upload.");
+    console.log('RECAP: Restricted document detected. Skipping upload.');
     // We would like to alter the [R] icon to indicate what's going
     // on, but we cannot call chrome.browserAction.setIcon()
     // here. Instead, we'd need to send a message to the background
@@ -102,23 +109,26 @@ ContentDelegate.prototype.checkRestrictions = function () {
     // we just go to the end of the final form.
     // Should we just always go the end of the final form?
     let target =
-      document.querySelector("form input") ||
+      document.querySelector('form input') ||
       document.forms[document.forms.length - 1].lastChild;
 
     // Nested div for horizontal centering.
-    target.insertAdjacentHTML('beforebegin',
-      `<div style="text-align: center">
-              <div style="display: inline-block; text-align: left; align: top">
-                <div class="recap-banner" style="display: table">
-                  <div style="display: table-cell; padding: 12px; ">
-                    <img src="${chrome.extension.getURL('assets/images/disabled-38.png')}"
-                         style="width: auto; height: auto">
-                  </div>
-                  <div style="display: table-cell; vertical-align: middle">This document <b>will not be uploaded</b> to the RECAP Archive because the RECAP extension has detected that it may be restricted from public distribution.
-                  </div>
-                </div>
-              </div>
-            </div>`);
+    const imgSrc = chrome.extension.getURL('assets/images/disabled-38.png');
+    const nestedDiv = `
+      <div style="text-align: center">
+        <div style="display: inline-block; text-align: left; align: top">
+          <div class="recap-banner" style="display: table">
+            <div style="display: table-cell; padding: 12px; ">
+              <img style="width: auto; height: auto" src="${imgSrc}">
+            </div>
+            <div style="display: table-cell; vertical-align: middle">
+              This document <b>will not be uploaded</b> to the RECAP Archive because the RECAP extension has detected that it may be restricted from public distribution.
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    target.insertAdjacentHTML('beforebegin', nestedDiv);
   }
 
   return restrictedDoc;
@@ -133,14 +143,18 @@ ContentDelegate.prototype.findAndStorePacerDocIds = function () {
 
   // Not all pages have a case ID, and there are corner-cases in merged dockets
   // where there are links to documents on another case.
-  let page_pacer_case_id = this.pacer_case_id
+  const page_pacer_case_id = this.pacer_case_id
     ? this.pacer_case_id
-    : this.recap.getPacerCaseIdFromPacerDocId(this.pacer_doc_id, function () { });
+    : this.recap.getPacerCaseIdFromPacerDocId(this.pacer_doc_id, () => { });
 
   let docsToCases = {};
 
   // Try getting a mapping from a pacer_doc_id in the URL to a
-  if (this.pacer_doc_id && page_pacer_case_id && typeof page_pacer_case_id === 'string') {
+  if (
+    this.pacer_doc_id &&
+    page_pacer_case_id &&
+    typeof page_pacer_case_id === 'string'
+  ) {
     debug(3, `Z doc ${this.pacer_doc_id} to ${page_pacer_case_id}`);
     docsToCases[this.pacer_doc_id] = page_pacer_case_id;
   }
@@ -202,7 +216,9 @@ ContentDelegate.prototype.handleDocketQueryUrl = function () {
           const form = document.querySelector('form');
           const div = document.createElement('div');
           div.classList.add('recap-banner');
-          div.appendChild(recapAlertButton(this.court, this.pacer_case_id, true));
+          div.appendChild(
+            recapAlertButton(this.court, this.pacer_case_id, true)
+          );
           form.appendChild(recapBanner(result.results[0]));
           form.appendChild(div);
         }
@@ -256,15 +272,19 @@ ContentDelegate.prototype.handleDocketDisplayPage = async function () {
   // if the content_delegate didn't pull the case Id on initialization,
   // check the page for a lead case dktrpt url.
   const tabStorage = await getItemsFromStorage(this.tabId)
-  this.pacer_case_id = this.pacer_case_id ? this.pacer_case_id : tabStorage.caseId;
+
+  this.pacer_case_id = this.pacer_case_id
+    ? this.pacer_case_id
+    : tabStorage.caseId;
 
   // If we don't have this.pacer_case_id at this point, punt.
-  if (!this.pacer_case_id) { return; }
+  if (!this.pacer_case_id) return;
 
   // insert the button in a disabled state
-  const tableBody = document.querySelector('tbody');
-  const tr = createAlertButtonTr();
-  tableBody.insertBefore(tr, tableBody.childNodes[0]);
+  tableBody.insertBefore(
+    createAlertButtonTr(),
+    document.querySelector('tbody').childNodes[0]
+  );
 
   this.recap.getAvailabilityForDocket(
     this.court,
@@ -307,7 +327,7 @@ ContentDelegate.prototype.handleDocketDisplayPage = async function () {
         (ok) => callback(ok));
     }
   } else {
-    console.info(`RECAP: Not uploading docket. RECAP is disabled.`);
+    console.info('RECAP: Not uploading docket. RECAP is disabled.');
   }
 };
 
@@ -338,7 +358,7 @@ ContentDelegate.prototype.handleAttachmentMenuPage = function () {
       this.recap.uploadAttachmentMenu(this.court, this.pacer_case_id,
         document.documentElement.innerHTML, callback);
     } else {
-      console.info("RECAP: Not uploading attachment menu. RECAP is disabled.");
+      console.info('RECAP: Not uploading attachment menu. RECAP is disabled.');
     }
   }.bind(this));
 };

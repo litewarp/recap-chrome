@@ -30,10 +30,10 @@ module.exports = {
             'always'
         ],
         'max-len': [
-          'error',
-          {
-            'code': 80,
-          }
+            'error',
+            {
+                'code': 80,
+            }
         ]
     }
 };
