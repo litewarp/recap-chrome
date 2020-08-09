@@ -1,4 +1,4 @@
-import * as PACER from './pacer';
+import PACER from './pacer';
 import Notifier from './notifier';
 import Recap from './recap';
 import $ from 'jquery';

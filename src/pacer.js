@@ -45,14 +45,14 @@ let PACER_TO_CL_IDS = {
 // called from anywhere; by convention we use an ALL_CAPS name to allude to
 // the purity (const-ness) of this object's contents.
 // Returns the court identifier for a given URL, or null if not a PACER site.
-export function getCourtFromUrl(url) {
+function getCourtFromUrl(url) {
   let match = (url || '')
     .toLowerCase()
     .match(/^\w+:\/\/(ecf|pacer)\.(\w+)\.uscourts\.gov\//);
   return match ? match[2] : null;
 }
 
-export function convertToCourtListenerCourt(pacer_court_id) {
+function convertToCourtListenerCourt(pacer_court_id) {
   return PACER_TO_CL_IDS[pacer_court_id] || pacer_court_id;
 }
 
@@ -61,7 +61,7 @@ export function convertToCourtListenerCourt(pacer_court_id) {
 //   https://ecf.dcd.uscourts.gov/doc1/04503837920
 // For CMECF Appellate:
 //   https://ecf.ca2.uscourts.gov/docs1/00205695758
-export function isDocumentUrl(url) {
+function isDocumentUrl(url) {
   if (
     url.match(/\/(?:doc1|docs1)\/\d+/) ||
     url.match(/\/cgi-bin\/show_doc/) ||
@@ -74,7 +74,7 @@ export function isDocumentUrl(url) {
   return false;
 }
 
-export function getCaseIdFromClaimsPage(document) {
+function getCaseIdFromClaimsPage(document) {
   const links = [...document.querySelectorAll('a')];
   const docketLink = links.find((link) => link.href.match(/DktRpt\.pl/));
   if (docketLink) {
@@ -83,14 +83,14 @@ export function getCaseIdFromClaimsPage(document) {
   }
 }
 // Returns true if the URL is for docket query page.
-export function isDocketQueryUrl(url) {
+function isDocketQueryUrl(url) {
   // The part after the "?" is all digits.
   return !!url.match(/\/(DktRpt|HistDocQry)\.pl\?\d+$/);
 }
 
 // Returns true if the given URL is for a docket display page (i.e. the page
 // after submitting the "Docket Sheet" query page).
-export function isDocketDisplayUrl(url) {
+function isDocketDisplayUrl(url) {
   // The part after the "?" has hyphens in it.
   //   https://ecf.dcd.uscourts.gov/cgi-bin/DktRpt.pl?591030040473392-L_1_0-1
   // Appellate:
@@ -166,13 +166,13 @@ export function isDocketDisplayUrl(url) {
 }
 
 // Returns true if the given URL is for a docket history display page.
-export function isDocketHistoryDisplayUrl(url) {
+function isDocketHistoryDisplayUrl(url) {
   return !!url.match(/\/HistDocQry\.pl\?\w+-[\w-]+$/);
 }
 
 // Returns true if this is a "Document Selection Menu" page (a list of the
 // attachments for a particular document).
-export function isAttachmentMenuPage(url, document) {
+function isAttachmentMenuPage(url, document) {
   let inputs = document.getElementsByTagName('input');
   let pageCheck =
     isDocumentUrl(url) &&
@@ -183,7 +183,7 @@ export function isAttachmentMenuPage(url, document) {
 
 // Returns true if this is a "Download Documents" page (confirmation of
 // pricing for all documents to receive a zip file with all of them)
-export function isDownloadAllDocumentsPage(url, document) {
+function isDownloadAllDocumentsPage(url, document) {
   let inputs = document.getElementsByTagName('input');
   let pageCheck =
     !!url.match(/\/show_multidocs\.pl\?/) &&
@@ -196,7 +196,7 @@ export function isDownloadAllDocumentsPage(url, document) {
 // exampleUrl: https://ecf.nyeb.uscourts.gov/cgi-bin/SearchClaims.pl?610550152546515-L_1_0-1
 // exampleHeader: <h2>Eastern District of New York<br>Claims Register </h2>
 
-export function isClaimsRegisterPage(url, document) {
+function isClaimsRegisterPage(url, document) {
   let headlines = [...document.getElementsByTagName('h2')];
   let pageCheck =
     !!url.match(/\/SearchClaims\.pl\?/) &&
@@ -210,7 +210,7 @@ export function isClaimsRegisterPage(url, document) {
 //   https://ecf.dcd.uscourts.gov/doc1/04503837920
 // appellate:
 //   https://ecf.ca1.uscourts.gov/n/beam/servlet/TransportRoom?servlet=ShowDoc&dls_id=00107215565&caseId=41182&dktType=dktPublic
-export function isSingleDocumentPage(url, document) {
+function isSingleDocumentPage(url, document) {
   let inputs = document.getElementsByTagName('input');
   let lastInput = inputs.length && inputs[inputs.length - 1].value;
   // If the receipt doesn't say "Image" we don't yet support it on the server.
@@ -226,7 +226,7 @@ export function isSingleDocumentPage(url, document) {
 }
 
 // Returns the document ID for a document view page or single-document page.
-export function getDocumentIdFromUrl(url) {
+function getDocumentIdFromUrl(url) {
   let match = (url || '').match(/\/(?:doc1|docs1)\/(\d+)/);
   if (match) {
     // PACER sites use the fourth digit of the pacer_doc_id to flag whether
@@ -238,7 +238,7 @@ export function getDocumentIdFromUrl(url) {
 
 // Get the document ID for a document view page using the "View Document"
 // form.
-export function getDocumentIdFromForm(url, document) {
+function getDocumentIdFromForm(url, document) {
   if (isDocumentUrl(url)) {
     let inputs = document.getElementsByTagName('input');
     let last_input = inputs[inputs.length - 1];
@@ -252,7 +252,7 @@ export function getDocumentIdFromForm(url, document) {
 }
 
 // Given a URL that satisfies isDocketQueryUrl, gets its case number.
-export function getCaseNumberFromUrls(urls) {
+function getCaseNumberFromUrls(urls) {
   // Iterate over an array of URLs and get the case number from the
   // first one that matches. Because the calling function may pass us URLs
   // other than the page URL, such as referrers, we narrow to
@@ -296,8 +296,7 @@ export function getCaseNumberFromUrls(urls) {
     }
   }
 }
-
-export function getCaseNumberFromInputs(url, document) {
+function getCaseNumberFromInputs(url, document) {
   if (isDocumentUrl(url)) {
     let inputs = document.getElementsByTagName('input');
     let last_input = inputs[inputs.length - 1];
@@ -318,12 +317,12 @@ export function getCaseNumberFromInputs(url, document) {
 }
 
 // Gets the last path component of a URL.
-export function getBaseNameFromUrl(url) {
+function getBaseNameFromUrl(url) {
   return url.replace(/\?.*/, '').replace(/.*\//, '');
 }
 
 // Parse the goDLS function returning its parameters as a dict.
-export function parseGoDLSFunction(goDLS_string) {
+function parseGoDLSFunction(goDLS_string) {
   // CMECF provides extra information on Document Links (DLS?) in the goDLS()
   // function of an onclick handler, e.g.:
   //
@@ -390,7 +389,7 @@ export function parseGoDLSFunction(goDLS_string) {
 }
 
 // Given document.cookie, returns true if the user is logged in to PACER.
-export function hasPacerCookie(cookieString) {
+function hasPacerCookie(cookieString) {
   let cookies = {};
   cookieString.replace(/\s*([^=;]+)=([^;]*)/g, function (match, name, value) {
     cookies[name.trim()] = value.trim();
@@ -400,13 +399,12 @@ export function hasPacerCookie(cookieString) {
 }
 
 // Returns true if the given court identifier is for an appellate court.
-export function isAppellateCourt(court) {
+function isAppellateCourt(court) {
   return APPELLATE_COURTS.includes(court);
 }
-
 // These are all the supported PACER court identifiers, together with their
 // West-style court name abbreviations.
-export const COURT_ABBREVS = {
+const COURT_ABBREVS = {
   // Appellate Courts
   ca1: '1st-Cir.',
   ca2: '2d-Cir.',
@@ -615,7 +613,7 @@ export const COURT_ABBREVS = {
 };
 
 // PACER court identifiers for appellate courts.
-export const APPELLATE_COURTS = [
+const APPELLATE_COURTS = [
   'ca1',
   'ca2',
   'ca3',
@@ -630,3 +628,29 @@ export const APPELLATE_COURTS = [
   'cadc',
   'cafc',
 ];
+
+const PACER = {
+  getCourtFromUrl,
+  convertToCourtListenerCourt,
+  isDocumentUrl,
+  getCaseIdFromClaimsPage,
+  isDocketQueryUrl,
+  isDocketDisplayUrl,
+  isDocketHistoryDisplayUrl,
+  isAttachmentMenuPage,
+  isDownloadAllDocumentsPage,
+  isSingleDocumentPage,
+  isClaimsRegisterPage,
+  getDocumentIdFromUrl,
+  getDocumentIdFromForm,
+  getCaseNumberFromUrls,
+  getCaseNumberFromInputs,
+  getBaseNameFromUrl,
+  parseGoDLSFunction,
+  hasPacerCookie,
+  isAppellateCourt,
+  COURT_ABBREVS,
+  APPELLATE_COURTS,
+};
+
+export default PACER;

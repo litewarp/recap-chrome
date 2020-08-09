@@ -1,11 +1,14 @@
 /*global jasmine */
+import Recap from '../src/recap';
+import { blobToDataURL } from '../src/utils';
+
 describe('The Recap export module', function () {
   const recap = Recap();
 
   const docUrls = [
     'https://ecf.canb.uscourts.gov/doc1/034031424909',
     'https://ecf.canb.uscourts.gov/doc1/034031425808',
-    'https://ecf.canb.uscourts.gov/doc1/034031438754'
+    'https://ecf.canb.uscourts.gov/doc1/034031438754',
   ];
   const court = 'nysd';
   const pacer_doc_id = '127015406472';
@@ -22,11 +25,10 @@ describe('The Recap export module', function () {
   // in utils, the callback is assigned the caller tab info
   // we use that to send the tabId to background worker so
   // we mock it here
-  const callback = jasmine.createSpy().and.callFake(() => { });
+  const callback = jasmine.createSpy().and.callFake(() => {});
   callback.tab = { id: 1234 };
 
-  const FormDataFake = function () {
-  };
+  const FormDataFake = function () {};
   FormDataFake.prototype.append = function (key, value) {
     this[key] = value;
   };
@@ -39,19 +41,29 @@ describe('The Recap export module', function () {
       test: function (xhr) {
         // The params are a plain object with a court property.
         if (xhr.params instanceof Object) {
-          return ('court' in xhr.params)
+          return 'court' in xhr.params;
         }
         return false;
       },
       parse: function (formData) {
         return formData;
-      }
-    })
+      },
+    });
     spyOn(window, 'fetch').and.callFake((url, options) => {
       const res = {};
-      res.status = jasmine.createSpy().and.callFake(() => Promise.resolve('200'));
-      res.text = jasmine.createSpy().and.callFake(() => Promise.resolve(`<html><iframe src="http://dummylink.com"></iframe></html>`));
-      res.json = jasmine.createSpy().and.callFake(() => Promise.resolve({ result: true }));
+      res.status = jasmine
+        .createSpy()
+        .and.callFake(() => Promise.resolve('200'));
+      res.text = jasmine
+        .createSpy()
+        .and.callFake(() =>
+          Promise.resolve(
+            `<html><iframe src="http://dummylink.com"></iframe></html>`
+          )
+        );
+      res.json = jasmine
+        .createSpy()
+        .and.callFake(() => Promise.resolve({ result: true }));
       res.blob = jasmine.createSpy().and.callFake(() => Promise.resolve(blob));
       return Promise.resolve(res);
     });
@@ -72,18 +84,18 @@ describe('The Recap export module', function () {
                 recap_enabled: true,
                 ['ia_style_filenames']: true,
                 ['lawyer_style_filenames']: false,
-                ['external_pdf']: true
+                ['external_pdf']: true,
               },
               ['1234']: {
                 ['pdf_blob']: dataUrl,
-                docsToCases: { ['034031424909']: '531591' }
-              }
+                docsToCases: { ['034031424909']: '531591' },
+              },
             });
           }),
-          remove: jasmine.createSpy('remove').and.callFake(() => { }),
-          set: jasmine.createSpy('set').and.callFake(function () { })
-        }
-      }
+          remove: jasmine.createSpy('remove').and.callFake(() => {}),
+          set: jasmine.createSpy('set').and.callFake(function () {}),
+        },
+      },
     };
   }
 
@@ -98,10 +110,11 @@ describe('The Recap export module', function () {
       recap.getAvailabilityForDocket(expectedCourt, expectedCaseId);
       expect(jasmine.Ajax.requests.mostRecent().url).toBe(
         'https://www.courtlistener.com/api/rest/v3/dockets/' +
-        '?pacer_case_id=531316' +
-        '&source__in=1%2C3%2C5%2C7%2C9%2C11%2C13%2C15' +
-        '&court=canb&' +
-        'fields=absolute_url%2Cdate_modified');
+          '?pacer_case_id=531316' +
+          '&source__in=1%2C3%2C5%2C7%2C9%2C11%2C13%2C15' +
+          '&court=canb&' +
+          'fields=absolute_url%2Cdate_modified'
+      );
     });
 
     it('calls the callback with the parsed server response', function () {
@@ -110,34 +123,35 @@ describe('The Recap export module', function () {
       const expectedCaseNum = '531316';
       recap.getAvailabilityForDocket(expectedCourt, expectedCaseNum, callback);
       jasmine.Ajax.requests.mostRecent().respondWith({
-        "status": 200,
-        "contentType": 'application/json',
-        "responseText": '{"expectedKey": "expectedValue"}'
+        status: 200,
+        contentType: 'application/json',
+        responseText: '{"expectedKey": "expectedValue"}',
       });
-      expect(callback).toHaveBeenCalledWith({ 'expectedKey': 'expectedValue' });
+      expect(callback).toHaveBeenCalledWith({ expectedKey: 'expectedValue' });
     });
   });
 
   describe('getAvailabilityForDocuments', function () {
     it('requests the correct URL', function () {
-      recap.getAvailabilityForDocuments(docUrls, 'canb', function () { });
+      recap.getAvailabilityForDocuments(docUrls, 'canb', function () {});
       expect(jasmine.Ajax.requests.mostRecent().url).toBe(
         'https://www.courtlistener.com/api/rest/v3/recap-query/?' +
-        'pacer_doc_id__in=https%3A%2F%2Fecf.canb.uscourts.gov' +
-        '%2Fdoc1%2F034031424909%2Chttps%3A%2F%2Fecf.canb.uscourts.gov' +
-        '%2Fdoc1%2F034031425808%2Chttps%3A%2F%2Fecf.canb.uscourts.gov' +
-        '%2Fdoc1%2F034031438754&docket_entry__docket__court=canb');
+          'pacer_doc_id__in=https%3A%2F%2Fecf.canb.uscourts.gov' +
+          '%2Fdoc1%2F034031424909%2Chttps%3A%2F%2Fecf.canb.uscourts.gov' +
+          '%2Fdoc1%2F034031425808%2Chttps%3A%2F%2Fecf.canb.uscourts.gov' +
+          '%2Fdoc1%2F034031438754&docket_entry__docket__court=canb'
+      );
     });
 
     it('calls the callback with the parsed server response', function () {
       const callback = jasmine.createSpy();
       recap.getAvailabilityForDocuments(docUrls, 'canb', callback);
       jasmine.Ajax.requests.mostRecent().respondWith({
-        "status": 200,
-        "contentType": 'application/json',
-        "responseText": '{"expectedKey": "expectedValue"}'
+        status: 200,
+        contentType: 'application/json',
+        responseText: '{"expectedKey": "expectedValue"}',
       });
-      expect(callback).toHaveBeenCalledWith({ 'expectedKey': 'expectedValue' });
+      expect(callback).toHaveBeenCalledWith({ expectedKey: 'expectedValue' });
     });
   });
 
@@ -158,7 +172,8 @@ describe('The Recap export module', function () {
     it('requests the correct URL', async function () {
       await recap.uploadDocket(court, pacer_doc_id, filename, type, html);
       expect(jasmine.Ajax.requests.mostRecent().url).toBe(
-        'https://www.courtlistener.com/api/rest/v3/recap/');
+        'https://www.courtlistener.com/api/rest/v3/recap/'
+      );
     });
 
     it('sends the correct FormData', async function () {
@@ -166,10 +181,19 @@ describe('The Recap export module', function () {
       expected.append('upload_type', 1);
       expected.append('court', court);
       expected.append('pacer_case_id', pacer_case_id);
-      expected.append('filepath_local', new Blob(
-        [html], { type: type }), filename);
+      expected.append(
+        'filepath_local',
+        new Blob([html], { type: type }),
+        filename
+      );
 
-      await recap.uploadDocket(court, pacer_case_id, html, 'DOCKET', function () { });
+      await recap.uploadDocket(
+        court,
+        pacer_case_id,
+        html,
+        'DOCKET',
+        function () {}
+      );
       const actualData = jasmine.Ajax.requests.mostRecent().data();
       expect(actualData).toEqual(jasmine.objectContaining(expected));
     });
@@ -192,7 +216,8 @@ describe('The Recap export module', function () {
     it('requests the correct URL', function () {
       recap.uploadAttachmentMenu(court, filename, type, html);
       expect(jasmine.Ajax.requests.mostRecent().url).toBe(
-        'https://www.courtlistener.com/api/rest/v3/recap/');
+        'https://www.courtlistener.com/api/rest/v3/recap/'
+      );
     });
 
     it('sends the correct FormData', function () {
@@ -200,10 +225,13 @@ describe('The Recap export module', function () {
       expected.append('court', court);
       expected.append('pacer_case_id', pacer_case_id);
       expected.append('upload_type', 2);
-      expected.append('filepath_local', new Blob(
-        [html], { type: type }), filename);
+      expected.append(
+        'filepath_local',
+        new Blob([html], { type: type }),
+        filename
+      );
 
-      recap.uploadAttachmentMenu(court, pacer_case_id, html, function () { });
+      recap.uploadAttachmentMenu(court, pacer_case_id, html, function () {});
       const actualData = jasmine.Ajax.requests.mostRecent().data();
       expect(actualData).toEqual(jasmine.objectContaining(expected));
     });
@@ -232,7 +260,9 @@ describe('The Recap export module', function () {
 
     it('sends the correct FormData and calls the callback', async function () {
       const expected = new FormDataFake();
-      const blob = new Blob([new ArrayBuffer(10000)], { type: 'application/pdf' });
+      const blob = new Blob([new ArrayBuffer(10000)], {
+        type: 'application/pdf',
+      });
       expected.append('court', court);
       expected.append('pacer_case_id', pacer_case_id);
       expected.append('pacer_doc_id', pacer_doc_id);
@@ -245,8 +275,13 @@ describe('The Recap export module', function () {
       expected.append('filepath_local', blob);
 
       await recap.uploadDocument(
-        court, pacer_case_id, pacer_doc_id, docnum, attachnum,
-        callback);
+        court,
+        pacer_case_id,
+        pacer_doc_id,
+        docnum,
+        attachnum,
+        callback
+      );
       expect(callback).toHaveBeenCalledWith(true);
     });
   });
@@ -256,11 +291,9 @@ describe('The Recap export module', function () {
     beforeEach(async () => {
       existingFormData = window.FormData;
       window.FormData = FormDataFake;
-      spyOn(recap, 'uploadZipFile').and.callFake(
-        (court, pacerCaseId, cb) => {
-          cb(true);
-        }
-      );
+      spyOn(recap, 'uploadZipFile').and.callFake((court, pacerCaseId, cb) => {
+        cb(true);
+      });
       await setupChromeSpy();
     });
 
@@ -271,15 +304,16 @@ describe('The Recap export module', function () {
 
     it('sends the correct FormData and calls the callback', async function () {
       const expected = new FormDataFake();
-      const blob = new Blob([new ArrayBuffer(10000)], { type: 'application/zip' });
+      const blob = new Blob([new ArrayBuffer(10000)], {
+        type: 'application/zip',
+      });
       expected.append('court', court);
       expected.append('pacer_case_id', pacer_case_id);
       expected.append('pacer_doc_id', pacer_doc_id);
       expected.append('upload_type', 10);
       expected.append('filepath_local', blob);
 
-      await recap.uploadZipFile(
-        court, pacer_case_id, callback);
+      await recap.uploadZipFile(court, pacer_case_id, callback);
 
       expect(callback).toHaveBeenCalledWith(true);
     });

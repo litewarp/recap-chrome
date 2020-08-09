@@ -217,7 +217,7 @@ export const blobToDataURL = (blob) => {
 // Debug levels:
 //   1   General informational
 //   3   Developer debugging
-var DEBUGLEVEL = 1;
+export var DEBUGLEVEL = 1;
 export function debug(level, varargs) {
   if (DEBUGLEVEL >= level) {
     var args = Array.prototype.slice.call(arguments, 1);

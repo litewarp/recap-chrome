@@ -1,4 +1,4 @@
-import * as PACER from './pacer';
+import PACER from './pacer';
 import $ from 'jquery';
 import { debug, destroyTabStorage, getItemsFromStorage, N87GC2 } from './utils';
 // Abstraction of the RECAP server APIs.

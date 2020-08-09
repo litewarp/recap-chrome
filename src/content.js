@@ -1,7 +1,7 @@
 import images from './assets/images';
 import './assets/js/bootstrap.bundle';
 import './assets/css/recap.css';
-import * as PACER from './pacer';
+import PACER from './pacer';
 import { ContentDelegate } from './content_delegate';
 import { getTabIdForContentScript } from './utils';
 
