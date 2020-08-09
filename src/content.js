@@ -2,8 +2,6 @@ import images from './assets/images';
 import './assets/js/jquery';
 import './assets/js/FileSaver';
 import './assets/js/bootstrap.bundle';
-import './assets/js/livestamp';
-import './assets/js/moment';
 import './utils';
 import './recap';
 import './pacer';

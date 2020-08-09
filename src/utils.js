@@ -1,3 +1,5 @@
+import { formatDistanceToNow } from 'date-fns';
+import $ from 'jquery';
 // -------------------------------------------------------------------------
 // Browser-specific utilities for use in background pages and content scripts.
 
@@ -260,14 +262,16 @@ const recapBanner = (result) => {
   const img = document.createElement('img');
   img.src = chrome.extension.getURL('assets/images/icon-16.png');
   const time = document.createElement('time');
-  time.setAttribute('data-livestamp', result.date_modified);
   time.setAttribute('title', result.date_modified);
-  time.innerHTML = result.date_modified;
-  const anchorHtml = `${img.outerHTML} View and Search this docket as of ${time.outerHTML} for free from RECAP`;
-
+  time.innerHTML = formatDistanceToNow(result.date_modified);
+  const anchorHtml = [
+    img.outerHTML,
+    'View and Search this docket as of',
+    time.outerHTML,
+    'for free from RECAP',
+  ].join(' ');
   const small = document.createElement('small');
   small.innerText = 'Note that archived dockets may be out of date';
-
   anchor.innerHTML = anchorHtml;
 
   div.appendChild(anchor);
