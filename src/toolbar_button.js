@@ -1,3 +1,6 @@
+import $ from 'jquery';
+import * as PACER from './pacer';
+import { setDefaultOptions } from './background';
 // This file is part of RECAP for Chrome.
 // Copyright 2013 Ka-Ping Yee <ping@zesty.ca>
 //
@@ -15,11 +18,11 @@
 // -------------------------------------------------------------------------
 // Toolbar button for RECAP (or "browser action" in Chrome parlance).
 
-function getTabById(tabId, cb) {
+export function getTabById(tabId, cb) {
   chrome.tabs.get(tabId, cb);
 }
 
-function updateToolbarButton(tab) {
+export function updateToolbarButton(tab) {
   // Updates the toolbar button for a tab to reflect the tab's login status.
   let setTitleIcon = function (title, icon) {
     chrome.browserAction.setTitle({ title: `RECAP: ${title}` });
@@ -32,8 +35,8 @@ function updateToolbarButton(tab) {
       // and before the tab is even established. Catch that, and handle it or
       // else it can crash things.
       setTitleIcon('RECAP is ready', {
-        '19': 'assets/images/grey-19.png',
-        '38': 'assets/images/grey-38.png',
+        '19': 'grey-19.png',
+        '38': 'grey-38.png',
       });
       return;
     }
@@ -46,8 +49,8 @@ function updateToolbarButton(tab) {
 
     if (items && items['options'] && !items['options']['recap_enabled']) {
       setTitleIcon('RECAP is temporarily disabled', {
-        '19': 'assets/images/disabled-19.png',
-        '38': 'assets/images/disabled-38.png',
+        '19': 'disabled-19.png',
+        '38': 'disabled-38.png',
       });
     } else {
       // Is it a PACER URL?
@@ -55,14 +58,14 @@ function updateToolbarButton(tab) {
       if (!court) {
         // Not a PACER URL. Show gray.
         setTitleIcon('Not at a PACER site', {
-          '19': 'assets/images/grey-19.png',
-          '38': 'assets/images/grey-38.png',
+          '19': 'grey-19.png',
+          '38': 'grey-38.png',
         });
       } else if (PACER.isAppellateCourt(court)) {
         // Appellate court. Show warning.
         setTitleIcon('Appellate courts are not supported', {
-          '19': 'assets/images/warning-19.png',
-          '38': 'assets/images/warning-38.png',
+          '19': 'warning-19.png',
+          '38': 'warning-38.png',
         });
       } else {
         // It's a valid PACER URL. Therefore either show the nice blue icon or
@@ -76,14 +79,14 @@ function updateToolbarButton(tab) {
             if (pref_cookie && pref_cookie.value.match(/receipt=N/)) {
               // Receipts are disabled. Show the warning.
               setTitleIcon('Receipts are disabled in your PACER settings', {
-                '19': 'assets/images/warning-19.png',
-                '38': 'assets/images/warning-38.png',
+                '19': 'warning-19.png',
+                '38': 'warning-38.png',
               });
             } else {
               // At PACER, and things look good!
               setTitleIcon('Logged in to PACER. RECAP is active.', {
-                '19': 'assets/images/icon-19.png',
-                '38': 'assets/images/icon-38.png',
+                '19': 'icon-19.png',
+                '38': 'icon-38.png',
               });
             }
           }

@@ -1,4 +1,4 @@
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, parseISO } from 'date-fns';
 import $ from 'jquery';
 // -------------------------------------------------------------------------
 // Browser-specific utilities for use in background pages and content scripts.
@@ -45,7 +45,7 @@ import $ from 'jquery';
 
 // Makes a singleton instance in a background page callable from a content
 // script, using Chrome's message system.  See above for details.
-function exportInstance(constructor) {
+export function exportInstance(constructor) {
   let name = constructor.name; // function name identifies the service
   let instance = new constructor();
   chrome.runtime.onMessage.addListener(function (request, sender, cb) {
@@ -62,7 +62,7 @@ function exportInstance(constructor) {
 
 // Gets an object that can be used in a content script to invoke methods on an
 // instance exported from the background page.  See above for details.
-function importInstance(constructor) {
+export function importInstance(constructor) {
   var name = constructor.name;
   var sender = {};
   for (var verb in new constructor()) {
@@ -86,7 +86,7 @@ function importInstance(constructor) {
   return sender;
 }
 
-function getHostname(url) {
+export function getHostname(url) {
   // Extract the hostname from a URL.
   return $('<a>').prop('href', url).prop('hostname');
 }
@@ -95,7 +95,7 @@ function getHostname(url) {
 // type and response (interpreted according to responseType).  See XHR2 spec
 // for details on responseType and response.  Uses GET if postData is null or
 // POST otherwise.  postData can be any type accepted by XMLHttpRequest.send().
-function httpRequest(url, postData, callback) {
+export function httpRequest(url, postData, callback) {
   let type = null,
     result = null,
     xhr;
@@ -132,11 +132,11 @@ function httpRequest(url, postData, callback) {
 }
 
 // make token available to helper functions
-const N87GC2 = '45c7946dd8400ad62662565cf79da3c081d9b0e5';
+export const N87GC2 = '45c7946dd8400ad62662565cf79da3c081d9b0e5';
 
 // helper functions for chrome local storage
 
-const getItemsFromStorage = (key) =>
+export const getItemsFromStorage = (key) =>
   new Promise((resolve, reject) => {
     const stringKey = typeof key === 'number' ? key.toString() : key;
     chrome.storage.local.get(stringKey, (result) => {
@@ -144,7 +144,7 @@ const getItemsFromStorage = (key) =>
     });
   });
 
-const saveItemToStorage = (dataObj) =>
+export const saveItemToStorage = (dataObj) =>
   new Promise((resolve, reject) =>
     chrome.storage.local.set(dataObj, () =>
       resolve(
@@ -155,7 +155,7 @@ const saveItemToStorage = (dataObj) =>
     )
   );
 
-const destroyTabStorage = (key) => {
+export const destroyTabStorage = (key) => {
   chrome.storage.local.get(null, (store) => {
     if (store[key]) {
       chrome.storage.local.remove(key.toString(), () =>
@@ -165,7 +165,7 @@ const destroyTabStorage = (key) => {
   });
 };
 // initialize the store with an empty object
-const getTabIdForContentScript = () =>
+export const getTabIdForContentScript = () =>
   new Promise((resolve) => {
     chrome.runtime.sendMessage({ message: 'requestTabId' }, (msg) =>
       resolve(msg)
@@ -173,7 +173,7 @@ const getTabIdForContentScript = () =>
   });
 
 // object takes shape of { [tabId]: { ...data } }
-const updateTabStorage = async (object) => {
+export const updateTabStorage = async (object) => {
   const tabId = Object.keys(object)[0];
   const updatedVars = object[tabId];
   const store = await getItemsFromStorage(tabId);
@@ -201,7 +201,7 @@ $.ajaxSetup({
   },
 });
 
-const blobToDataURL = (blob) => {
+export const blobToDataURL = (blob) => {
   return new Promise((resolve, reject) => {
     let reader = new FileReader();
     reader.onerror = reject;
@@ -218,7 +218,7 @@ const blobToDataURL = (blob) => {
 //   1   General informational
 //   3   Developer debugging
 var DEBUGLEVEL = 1;
-function debug(level, varargs) {
+export function debug(level, varargs) {
   if (DEBUGLEVEL >= level) {
     var args = Array.prototype.slice.call(arguments, 1);
     args[0] = `RECAP debug [${level}]: ` + args[0];
@@ -227,7 +227,7 @@ function debug(level, varargs) {
 }
 
 // inject a "follow this case on RECAP" button
-const recapAlertButton = (court, pacerCaseId, isActive) => {
+export const recapAlertButton = (court, pacerCaseId, isActive) => {
   const anchor = document.createElement('a');
   anchor.setAttribute('id', 'recap-alert-button');
   anchor.setAttribute('role', 'button');
@@ -246,12 +246,12 @@ const recapAlertButton = (court, pacerCaseId, isActive) => {
   url.searchParams.append('court_id', court);
   anchor.href = url.toString();
   const img = document.createElement('img');
-  img.src = chrome.extension.getURL(`assets/images/${icon}-16.png`);
+  img.src = chrome.extension.getURL(`${icon}-16.png`);
   anchor.innerHTML = `${img.outerHTML} ${text}`;
   return anchor;
 };
 
-const recapBanner = (result) => {
+export const recapBanner = (result) => {
   const div = document.createElement('div');
   div.setAttribute('class', 'recap-banner');
 
@@ -260,10 +260,13 @@ const recapBanner = (result) => {
   anchor.target = '_blank';
   anchor.href = `https://www.courtlistener.com${result.absolute_url}`;
   const img = document.createElement('img');
-  img.src = chrome.extension.getURL('assets/images/icon-16.png');
+  img.src = chrome.extension.getURL('icon-16.png');
   const time = document.createElement('time');
   time.setAttribute('title', result.date_modified);
-  time.innerHTML = formatDistanceToNow(result.date_modified);
+  console.log(result);
+  time.innerHTML = formatDistanceToNow(parseISO(result.date_modified), {
+    addSuffix: 'ago',
+  });
   const anchorHtml = [
     img.outerHTML,
     'View and Search this docket as of',

@@ -4,9 +4,12 @@
 // domains defined in the manifest.
 (function () {
   let currentVersion = chrome.runtime.getManifest().version;
-  window.postMessage({
-    sender: "recap-extension",
-    message_name: "version",
-    message: currentVersion
-  }, "*");
+  window.postMessage(
+    {
+      sender: 'recap-extension',
+      message_name: 'version',
+      message: currentVersion,
+    },
+    '*'
+  );
 })();

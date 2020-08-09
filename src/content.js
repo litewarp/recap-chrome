@@ -1,11 +1,9 @@
 import images from './assets/images';
-import './assets/js/jquery';
-import './assets/js/FileSaver';
 import './assets/js/bootstrap.bundle';
-import './utils';
-import './recap';
-import './pacer';
-import './content_delegate';
+import './assets/css/recap.css';
+import * as PACER from './pacer';
+import { ContentDelegate } from './content_delegate';
+import { getTabIdForContentScript } from './utils';
 
 // Content script to run when DOM finishes loading (run_at: "document_end").
 

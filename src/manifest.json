@@ -64,5 +64,5 @@
       "is_default": false
     }
   },
-  "web_accessible_resources": ["assets/images/*.png"]
+  "web_accessible_resources": ["*.png"]
 }

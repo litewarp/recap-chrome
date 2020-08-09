@@ -1,12 +1,14 @@
-import './utils';
-import './pacer';
+import { exportInstance } from './utils';
 import './recap';
 import $ from 'jquery';
+import Notifier from './notifier';
+import Recap from './recap';
+import { getTabById, updateToolbarButton } from './toolbar_button';
 // Make services callable from content scripts.
 exportInstance(Notifier);
 exportInstance(Recap);
 
-function setDefaultOptions(details) {
+export function setDefaultOptions(details) {
   // Set options to their default values.
   console.debug('RECAP: Setting default options after install/upgrade.');
   chrome.storage.local.get('options', function (items) {

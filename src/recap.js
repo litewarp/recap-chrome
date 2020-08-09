@@ -1,6 +1,9 @@
+import * as PACER from './pacer';
+import $ from 'jquery';
+import { debug, destroyTabStorage, getItemsFromStorage, N87GC2 } from './utils';
 // Abstraction of the RECAP server APIs.
 // Public impure functions.  (See utils.js for details on defining services.)
-function Recap() {
+export default function Recap() {
   const DEBUG = false, // When true, don't publish what's sent to the archive.
     SERVER_ROOT = 'https://www.courtlistener.com/api/rest/v3/',
     UPLOAD_TYPES = {
