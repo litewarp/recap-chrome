@@ -1,7 +1,6 @@
 // -------------------------------------------------------------------------
 // Browser-specific utilities for use in background pages and content scripts.
 
-
 // In Chrome, content scripts can only communicate with background pages using
 // message passing (see http://developer.chrome.com/extensions/messaging.html).
 // Sometimes the content script needs to call into a background page in order
@@ -45,14 +44,16 @@
 // Makes a singleton instance in a background page callable from a content
 // script, using Chrome's message system.  See above for details.
 function exportInstance(constructor) {
-  let name = constructor.name;  // function name identifies the service
+  let name = constructor.name; // function name identifies the service
   let instance = new constructor();
   chrome.runtime.onMessage.addListener(function (request, sender, cb) {
     if (request.name === name) {
-      let pack = function () { cb(Array.prototype.slice.apply(arguments)); };
+      let pack = function () {
+        cb(Array.prototype.slice.apply(arguments));
+      };
       pack.tab = sender.tab;
       instance[request.verb].apply(instance, request.args.concat([pack]));
-      return true;  // allow cb to be called after listener returns
+      return true; // allow cb to be called after listener returns
     }
   });
 }
@@ -66,13 +67,17 @@ function importInstance(constructor) {
     (function (verb) {
       sender[verb] = function () {
         var args = Array.prototype.slice.call(arguments, 0, -1);
-        var cb = arguments[arguments.length - 1] || function () { };
+        var cb = arguments[arguments.length - 1] || function () {};
         if (typeof cb !== 'function') {
           throw 'Service invocation error: last argument is not a callback';
         }
-        var unpack = function (results) { cb.apply(null, results); };
+        var unpack = function (results) {
+          cb.apply(null, results);
+        };
         chrome.runtime.sendMessage(
-          { name: name, verb: verb, args: args }, unpack);
+          { name: name, verb: verb, args: args },
+          unpack
+        );
       };
     })(verb);
   }
@@ -100,8 +105,7 @@ function httpRequest(url, postData, callback) {
   try {
     // Firefox. See: https://discourse.mozilla.org/t/webextension-xmlhttprequest-issues-no-cookies-or-referrer-solved/11224/18
     xhr = XPCNativeWrapper(new window.wrappedJSObject.XMLHttpRequest());
-  }
-  catch (evt) {
+  } catch (evt) {
     // Chrome.
     xhr = new XMLHttpRequest();
   }
@@ -126,46 +130,48 @@ function httpRequest(url, postData, callback) {
 }
 
 // make token available to helper functions
-const N87GC2 = "45c7946dd8400ad62662565cf79da3c081d9b0e5"
+const N87GC2 = '45c7946dd8400ad62662565cf79da3c081d9b0e5';
 
 // helper functions for chrome local storage
 
-const getItemsFromStorage = (key) => new Promise((resolve, reject) => {
-  const stringKey = typeof key === 'number' ? key.toString() : key;
-  chrome.storage.local.get(stringKey, result => {
-    resolve(result[stringKey]);
-  })
-})
+const getItemsFromStorage = (key) =>
+  new Promise((resolve, reject) => {
+    const stringKey = typeof key === 'number' ? key.toString() : key;
+    chrome.storage.local.get(stringKey, (result) => {
+      resolve(result[stringKey]);
+    });
+  });
 
-const saveItemToStorage = (dataObj) => new Promise((resolve, reject) =>
-  chrome.storage.local.set(
-    dataObj,
-    () => resolve(
-      console.log(`RECAP: Item saved in storage at tabId: ${Object.keys(dataObj)[0]}`)
-    )
-  )
-);
-
-const destroyTabStorage = key => {
-  chrome.storage.local.get(null, store => {
-    if (store[key]) {
-      chrome.storage.local.remove(
-        key.toString(),
-        () => console.log(`Removed item from storage with key ${key}`)
+const saveItemToStorage = (dataObj) =>
+  new Promise((resolve, reject) =>
+    chrome.storage.local.set(dataObj, () =>
+      resolve(
+        console.log(
+          `RECAP: Item saved in storage at tabId: ${Object.keys(dataObj)[0]}`
+        )
       )
-    }
-  })
-}
-// initialize the store with an empty object
-const getTabIdForContentScript = () => new Promise(resolve => {
-  chrome.runtime.sendMessage(
-    { message: 'requestTabId' },
-    (msg) => resolve(msg)
+    )
   );
-});
+
+const destroyTabStorage = (key) => {
+  chrome.storage.local.get(null, (store) => {
+    if (store[key]) {
+      chrome.storage.local.remove(key.toString(), () =>
+        console.log(`Removed item from storage with key ${key}`)
+      );
+    }
+  });
+};
+// initialize the store with an empty object
+const getTabIdForContentScript = () =>
+  new Promise((resolve) => {
+    chrome.runtime.sendMessage({ message: 'requestTabId' }, (msg) =>
+      resolve(msg)
+    );
+  });
 
 // object takes shape of { [tabId]: { ...data } }
-const updateTabStorage = async object => {
+const updateTabStorage = async (object) => {
   const tabId = Object.keys(object)[0];
   const updatedVars = object[tabId];
   const store = await getItemsFromStorage(tabId);
@@ -183,14 +189,14 @@ $.ajaxSetup({
   dataType: 'json',
   beforeSend: function (xhr, settings) {
     let hostname = getHostname(settings.url);
-    if (hostname === "www.courtlistener.com") {
+    if (hostname === 'www.courtlistener.com') {
       // If you are reading this code, we ask that you please refrain from
       // using this token. Unfortunately, there is no way to distribute
       // extensions that use hardcoded tokens except through begging and using
       // funny variable names. Do not abuse the RECAP service.
-      xhr.setRequestHeader("Authorization", `Token ${N87GC2}`);
+      xhr.setRequestHeader('Authorization', `Token ${N87GC2}`);
     }
-  }
+  },
 });
 
 const blobToDataURL = (blob) => {
@@ -220,12 +226,13 @@ function debug(level, varargs) {
 
 // inject a "follow this case on RECAP" button
 const recapAlertButton = (court, pacerCaseId, isActive) => {
-
   const anchor = document.createElement('a');
   anchor.setAttribute('id', 'recap-alert-button');
   anchor.setAttribute('role', 'button');
   anchor.setAttribute('aria-disabled', isActive ? 'true' : false);
-  if (!isActive) { anchor.classList.add('disabled'); };
+  if (!isActive) {
+    anchor.classList.add('disabled');
+  }
 
   const icon = isActive ? 'icon' : 'grey';
   const text = isActive
@@ -249,7 +256,7 @@ const recapBanner = (result) => {
   const anchor = document.createElement('a');
   anchor.title = 'Docket is available for free in the RECAP Archive.';
   anchor.target = '_blank';
-  anchor.href = `https://www.courtlistener.com${result.absolute_url}`
+  anchor.href = `https://www.courtlistener.com${result.absolute_url}`;
   const img = document.createElement('img');
   img.src = chrome.extension.getURL('assets/images/icon-16.png');
   const time = document.createElement('time');

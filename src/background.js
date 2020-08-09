@@ -1,3 +1,7 @@
+import './utils';
+import './pacer';
+import './recap';
+import $ from 'jquery';
 // Make services callable from content scripts.
 exportInstance(Notifier);
 exportInstance(Recap);
@@ -6,8 +10,10 @@ function setDefaultOptions(details) {
   // Set options to their default values.
   console.debug('RECAP: Setting default options after install/upgrade.');
   chrome.storage.local.get('options', function (items) {
-    console.debug('RECAP: Attempted to get \'options\' key from local ' +
-      `storage. Got: ${items}`);
+    const msg =
+      'RECAP: Attempted to get "options" key from localstorage.' +
+      `Got: ${items}`;
+    console.debug(msg);
     let defaults = {
       external_pdf: false,
       recap_enabled: true,
@@ -23,8 +29,9 @@ function setDefaultOptions(details) {
       chrome.storage.local.set({ options: defaults });
       console.debug('RECAP: Set the defaults on new install successfully.');
     } else {
-      console.debug('RECAP: Existing install. Attempting to set new ' +
-        'defaults, if any');
+      console.debug(
+        'RECAP: Existing install. Attempting to set new ' + 'defaults, if any'
+      );
 
       // it's weird that we have a `recap_disabled` option
       // when it should be `recap_enabled`.
@@ -34,10 +41,10 @@ function setDefaultOptions(details) {
       // so everyone should have it)
       let optionToUpgrade = 'recap_disabled';
       // if the option is a Boolean (as it should be)
-      if (typeof (items.options[optionToUpgrade]) === 'boolean') {
+      if (typeof items.options[optionToUpgrade] === 'boolean') {
         // set the inverse option `recap_enabled` to
         // the inverse of `recap_disabled`
-        items.options.recap_enabled = !(items.options[optionToUpgrade]);
+        items.options.recap_enabled = !items.options[optionToUpgrade];
       } else {
         // if for some reason it's _not_ a boolean, let's default to uploading.
         items.options.recap_enabled = true;
@@ -57,21 +64,22 @@ function setDefaultOptions(details) {
 
 function showNotificationTab(details) {
   // Show some kind of notification tab to the user after install/upgrade.
-  console.debug('RECAP: showing install/upgrade notification if ' +
-    'version matches');
+  console.debug(
+    'RECAP: showing install/upgrade notification if ' + 'version matches'
+  );
   let currentVersion = chrome.runtime.getManifest().version;
   if (details.reason === 'update' && currentVersion === '1.2.3') {
     // This version is when we pushed for donations. Show that page.
     chrome.tabs.create({
-      url: 'https://free.law/fundraisers/2017/recap/'
+      url: 'https://free.law/fundraisers/2017/recap/',
     });
   } else if (details.reason === 'update' && currentVersion === '1.2.10') {
     chrome.tabs.create({
-      url: 'https://free.law/fundraisers/2018/recap/'
+      url: 'https://free.law/fundraisers/2018/recap/',
     });
   } else if (details.reason === 'update' && currentVersion === '1.2.15') {
     chrome.tabs.create({
-      url: 'https://free.law/fundraisers/2019/recap/'
+      url: 'https://free.law/fundraisers/2019/recap/',
     });
   }
 }
