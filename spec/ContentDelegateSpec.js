@@ -1,7 +1,7 @@
 /*global jasmine, DEBUGLEVEL */
 import PACER from '../src/pacer';
 import { ContentDelegate } from '../src/content_delegate';
-import { blobToDataURL, DEBUGLEVEL } from '../src/utils';
+import { blobToDataURL } from '../src/utils';
 
 describe('The ContentDelegate class', function () {
   // 'tabId' values
@@ -92,7 +92,6 @@ describe('The ContentDelegate class', function () {
     undefined,
     []
   );
-  //TODO
   function setupChromeSpy() {
     window.chrome = {
       extension: { getURL: jasmine.createSpy() },
@@ -113,6 +112,7 @@ describe('The ContentDelegate class', function () {
 
   let nativeFetch;
   beforeEach(function () {
+    // stub the chrome.runtime.sendMessage function
     nativeFetch = window.fetch;
     window.fetch = () =>
       Promise.resolve(
@@ -235,10 +235,21 @@ describe('The ContentDelegate class', function () {
     beforeEach(function () {
       form = document.createElement('form');
       document.body.appendChild(form);
+      window.chrome = {
+        extension: {
+          getURL: jasmine
+            .createSpy()
+            .and.callFake((str) => '/iconimageurl.png'),
+        },
+        runtime: {
+          sendMessage: jasmine.createSpy().and.callFake((_, cb) => cb({})),
+        },
+      };
     });
 
     afterEach(function () {
       form.remove();
+      delete window.chrome;
     });
 
     it('has no effect when not on a docket query url', function () {
@@ -249,8 +260,9 @@ describe('The ContentDelegate class', function () {
       expect(PACER.hasPacerCookie).not.toHaveBeenCalled();
     });
 
+    // test is dependent on function order of operations,
+    // but does exercise all existing branches
     it('checks for a Pacer cookie', function () {
-      // test is dependent on function order of operations, but does exercise all existing branches
       const cd = nonsenseUrlContentDelegate;
       spyOn(cd.recap, 'getAvailabilityForDocket');
       spyOn(PACER, 'hasPacerCookie').and.returnValue(false);
@@ -262,31 +274,38 @@ describe('The ContentDelegate class', function () {
     it('handles zero results from getAvailabilityForDocket', function () {
       const cd = docketQueryContentDelegate;
       spyOn(PACER, 'hasPacerCookie').and.returnValue(true);
+      spyOn(cd.recap, 'getAvailabilityForDocket').and.callFake(
+        (court, pacerId, cb) =>
+          cb({
+            count: 0,
+            results: [],
+          })
+      );
       cd.handleDocketQueryUrl();
-      jasmine.Ajax.requests.mostRecent().respondWith({
-        status: 200,
-        contentType: 'application/json',
-        responseText: '{"count": 0, "results": []}',
-      });
       expect(form.innerHTML).toBe('');
     });
 
     it('inserts the RECAP banner on an appropriate page', function () {
       const cd = docketQueryContentDelegate;
       spyOn(PACER, 'hasPacerCookie').and.returnValue(true);
+      spyOn(cd.recap, 'getAvailabilityForDocket').and.callFake(
+        (court, pacerId, cb) =>
+          cb({
+            count: 1,
+            results: [
+              {
+                date_modified: '2015-12-17T03:24:00',
+                absolute_url:
+                  '/download/gov.uscourts.canb.531591/' +
+                  'gov.uscourts.canb.531591.docket.html',
+              },
+            ],
+          })
+      );
       cd.handleDocketQueryUrl();
-      jasmine.Ajax.requests.mostRecent().respondWith({
-        status: 200,
-        contentType: 'application/json',
-        responseText:
-          '{"count": 1, "results": [' +
-          '{"date_modified": "04/16/15", "absolute_url": ' +
-          '"/download/gov.uscourts.' +
-          'canb.531591/gov.uscourts.canb.531591.docket.html"}]}',
-      });
       const banner = document.querySelector('.recap-banner');
       expect(banner).not.toBeNull();
-      expect(banner.innerHTML).toContain('04/16/15');
+      expect(banner.innerHTML).toContain('2015-12-17T03:24:00');
       const link = banner.querySelector('a');
       expect(link).not.toBeNull();
       expect(link.href).toBe(
@@ -297,13 +316,15 @@ describe('The ContentDelegate class', function () {
 
     it('has no effect when on a docket query that has no RECAP', function () {
       const cd = docketQueryContentDelegate;
+      spyOn(cd.recap, 'getAvailabilityForDocket').and.callFake(
+        (court, pacerId, cb) =>
+          cb({
+            count: 0,
+            results: [],
+          })
+      );
       spyOn(PACER, 'hasPacerCookie').and.returnValue(true);
       cd.handleDocketQueryUrl();
-      jasmine.Ajax.requests.mostRecent().respondWith({
-        status: 200,
-        contentType: 'application/json',
-        responseText: '{}',
-      });
       const banner = document.querySelector('.recap-banner');
       expect(banner).toBeNull();
     });
@@ -359,6 +380,13 @@ describe('The ContentDelegate class', function () {
               }),
               set: jasmine.createSpy('set').and.callFake(function () {}),
             },
+          },
+          runtime: {
+            sendMessage: jasmine
+              .createSpy()
+              .and.callFake((_, cb) =>
+                cb({ count: 1, results: [{ stuff: 'text' }] })
+              ),
           },
         };
       });
@@ -434,6 +462,13 @@ describe('The ContentDelegate class', function () {
       describe('when the docket page is not an interstitial page', function () {
         it('inserts a button linking the user to a create alert page on CL', async () => {
           const cd = docketDisplayContentDelegate;
+          spyOn(cd.recap, 'getAvailabilityForDocket').and.callFake(
+            (court, pacerId, cb) =>
+              cb({
+                count: 1,
+                results: [{ stuff: 'text' }],
+              })
+          );
           await cd.handleDocketDisplayPage();
           const button = document.getElementById('recap-alert-button');
           expect(button).not.toBeNull();
@@ -442,6 +477,13 @@ describe('The ContentDelegate class', function () {
         it('calls uploadDocket and responds to a positive result', async function () {
           const cd = docketDisplayContentDelegate;
           spyOn(cd.notifier, 'showUpload');
+          spyOn(cd.recap, 'getAvailabilityForDocket').and.callFake(
+            (court, pacerId, cb) =>
+              cb({
+                count: 1,
+                results: [{ stuff: 'text' }],
+              })
+          );
           spyOn(cd.recap, 'uploadDocket').and.callFake((pc, pci, h, ut, cb) => {
             cb.tab = { id: 1234 };
             cb(true);
@@ -463,6 +505,13 @@ describe('The ContentDelegate class', function () {
         it('calls uploadDocket and responds to a positive historical result', async function () {
           const cd = historyDocketDisplayContentDelegate;
           spyOn(cd.notifier, 'showUpload');
+          spyOn(cd.recap, 'getAvailabilityForDocket').and.callFake(
+            (court, pacerId, cb) =>
+              cb({
+                count: 1,
+                results: [{ stuff: 'text' }],
+              })
+          );
           spyOn(cd.recap, 'uploadDocket').and.callFake((pc, pci, h, ut, cb) => {
             cb.tab = { id: 1234 };
             cb(true);
@@ -484,6 +533,13 @@ describe('The ContentDelegate class', function () {
         it('calls uploadDocket and responds to a negative result', async function () {
           const cd = docketDisplayContentDelegate;
           spyOn(cd.notifier, 'showUpload');
+          spyOn(cd.recap, 'getAvailabilityForDocket').and.callFake(
+            (court, pacerId, cb) =>
+              cb({
+                count: 1,
+                results: [{ stuff: 'text' }],
+              })
+          );
           spyOn(cd.recap, 'uploadDocket').and.callFake((pc, pci, h, ut, cb) => {
             cb.tab = { id: 1234 };
             cb(false);
@@ -869,6 +925,18 @@ describe('The ContentDelegate class', function () {
     const form_id = '1234';
     const event = { data: { id: form_id } };
 
+    beforeAll(() => {
+      window.chrome = {
+        runtime: {
+          sendMessage: jasmine.createSpy().and.callFake((_, cb) => cb({})),
+        },
+      };
+    });
+
+    afterAll(() => {
+      delete window.chrome;
+    });
+
     beforeEach(function () {
       form = document.createElement('form');
       form.id = form_id;
@@ -968,6 +1036,9 @@ describe('The ContentDelegate class', function () {
       const dataUrl = await blobToDataURL(blob);
       documentElement = document.createElement('html');
       window.chrome = {
+        runtime: {
+          sendMessage: jasmine.createSpy().and.callFake((_, cb) => cb({})),
+        },
         storage: {
           local: {
             get: jasmine.createSpy().and.callFake((_, cb) => {
