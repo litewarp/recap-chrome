@@ -263,7 +263,6 @@ export const recapBanner = (result) => {
   img.src = chrome.extension.getURL('icon-16.png');
   const time = document.createElement('time');
   time.setAttribute('title', result.date_modified);
-  console.log(result);
   time.innerHTML = formatDistanceToNow(parseISO(result.date_modified), {
     addSuffix: 'ago',
   });

@@ -100,7 +100,7 @@ describe('The Recap export module', function () {
   }
 
   function removeChromeSpy() {
-    delete window.chrome;
+    window.chrome = {};
   }
 
   describe('getAvailabilityForDocket', function () {

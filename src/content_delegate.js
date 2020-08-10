@@ -171,7 +171,7 @@ export class ContentDelegate {
       let link = this.links[i];
       if (PACER.isDocumentUrl(link.href)) {
         let pacer_doc_id = PACER.getDocumentIdFromUrl(link.href);
-        link.setAttribute('pacerDocId', pacer_doc_id);
+        $(link).data('pacer_doc_id', pacer_doc_id);
         this.pacer_doc_ids.push(pacer_doc_id);
 
         let onclick = link.getAttribute('onclick');
@@ -771,7 +771,7 @@ export class ContentDelegate {
             `attach links and icons where appropriate.`
         );
         for (let i = 0; i < this.links.length; i++) {
-          const pacer_doc_id = this.links[i].getAttribute('pacerDocId');
+          let pacer_doc_id = $(this.links[i]).data('pacer_doc_id');
           if (!pacer_doc_id) {
             continue;
           }
@@ -792,7 +792,7 @@ export class ContentDelegate {
           );
           recap_link.append(
             $('<img/>').attr({
-              src: chrome.extension.getURL('icon-16.png'),
+              src: chrome.extension.getURL('assets/images/icon-16.png'),
             })
           );
           recap_link.insertAfter(this.links[i]);

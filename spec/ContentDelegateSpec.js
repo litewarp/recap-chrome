@@ -3,6 +3,13 @@ import PACER from '../src/pacer';
 import { ContentDelegate } from '../src/content_delegate';
 import { blobToDataURL } from '../src/utils';
 
+console.profile('cause of reload');
+
+window.addEventListener('beforeunload', function () {
+  console.profileEnd('cause of reload');
+  debugger;
+});
+
 describe('The ContentDelegate class', function () {
   // 'tabId' values
   const tabId = 1234;
@@ -107,13 +114,12 @@ describe('The ContentDelegate class', function () {
     };
   }
   function removeChromeSpy() {
-    delete window.chrome;
+    window.chrome = {};
   }
 
   let nativeFetch;
   beforeEach(function () {
     // stub the chrome.runtime.sendMessage function
-    nativeFetch = window.fetch;
     window.fetch = () =>
       Promise.resolve(
         new window.Response(new Blob([pdf_data], { type: 'application/pdf' }), {
@@ -127,7 +133,6 @@ describe('The ContentDelegate class', function () {
   afterEach(function () {
     jasmine.Ajax.uninstall();
     removeChromeSpy();
-    window.fetch = nativeFetch;
   });
 
   describe('ContentDelegate constructor', function () {
@@ -249,7 +254,7 @@ describe('The ContentDelegate class', function () {
 
     afterEach(function () {
       form.remove();
-      delete window.chrome;
+      window.chrome = {};
     });
 
     it('has no effect when not on a docket query url', function () {
@@ -349,7 +354,7 @@ describe('The ContentDelegate class', function () {
       });
 
       afterEach(function () {
-        delete window.chrome;
+        window.chrome = {};
       });
 
       it('has no effect when recap_enabled option is false', function () {
@@ -393,7 +398,7 @@ describe('The ContentDelegate class', function () {
 
       afterEach(function () {
         document.querySelector('table').remove();
-        delete window.chrome;
+        window.chrome = {};
       });
 
       it('has no effect when not on a docket display url', function () {
@@ -580,7 +585,7 @@ describe('The ContentDelegate class', function () {
 
       afterEach(function () {
         form.remove();
-        delete window.chrome;
+        window.chrome = {};
       });
 
       it('has no effect recap_enabled option is not set', function () {
@@ -610,7 +615,7 @@ describe('The ContentDelegate class', function () {
 
       afterEach(function () {
         form.remove();
-        delete window.chrome;
+        window.chrome = {};
       });
 
       describe('when the history state is already set', function () {
@@ -934,7 +939,7 @@ describe('The ContentDelegate class', function () {
     });
 
     afterAll(() => {
-      delete window.chrome;
+      window.chrome = {};
     });
 
     beforeEach(function () {
@@ -1069,7 +1074,7 @@ describe('The ContentDelegate class', function () {
     });
 
     afterEach(() => {
-      delete window.chrome;
+      window.chrome = {};
     });
 
     it('handles no iframe', function () {
@@ -1078,7 +1083,7 @@ describe('The ContentDelegate class', function () {
       expect(document.documentElement.innerHTML).toBe(pre + inner + post);
     });
 
-    it('correctly extracts the data before and after the iframe', async function () {
+    it('correctly extracts the data before and after the iframe', async () => {
       await cd.showPdfPage(documentElement, html);
       // removed waiting check because the content_delegate
       // removes the paragraph if successful which seems to occur prior
@@ -1108,15 +1113,10 @@ describe('The ContentDelegate class', function () {
 
         window.saveAs = jasmine
           .createSpy('saveAs')
-          .and.callFake(() => Promise.resolve(true));
-        // jasmine.Ajax.requests.mostRecent().respondWith({
-        //   'status' : 200,
-        //   'contentType' : 'application/pdf',
-        //   'responseText' : pdf_data
-        // });
+          .and.callFake((blob, file) => Promise.resolve(true));
       });
 
-      it('makes the back button redisplay the previous page', async function () {
+      it('makes the back button redisplay the previous page', async () => {
         await cd.showPdfPage(documentElement, html);
         expect(window.onpopstate).toEqual(jasmine.any(Function));
         window.onpopstate({ state: { content: 'previous' } });
@@ -1125,7 +1125,7 @@ describe('The ContentDelegate class', function () {
         );
       });
 
-      it('displays the page with the downloaded file in an iframe', async function () {
+      it('displays the page with downloaded file in an iframe', async () => {
         await cd.showPdfPage(documentElement, html);
         if (
           navigator.userAgent.indexOf('Chrome') < 0 &&
@@ -1289,10 +1289,6 @@ describe('The ContentDelegate class', function () {
     const cd = docketDisplayContentDelegate;
     const linkUrl = singleDocUrl;
 
-    afterEach(function () {
-      delete window.chrome;
-    });
-
     describe('when the popup option is not set', function () {
       beforeEach(function () {
         window.chrome = {
@@ -1431,18 +1427,18 @@ describe('The ContentDelegate class', function () {
       });
 
       it('attaches a working click handler', function () {
-        spyOn(cd, 'handleRecapLinkClick');
-        spyOn(cd.recap, 'getAvailabilityForDocuments').and.callFake(function (
-          pc,
-          pci,
-          callback
-        ) {
-          callback({
-            results: [{ pacer_doc_id: 1234, filepath_local: 'download/1234' }],
-          });
-        });
+        spyOn(cd, 'handleRecapLinkClick').and.callFake((window, href) => {});
+        spyOn(cd.recap, 'getAvailabilityForDocuments').and.callFake(
+          (pc, pci, callback) => {
+            callback({
+              results: [
+                { pacer_doc_id: 1234, filepath_local: 'download/1234' },
+              ],
+            });
+          }
+        );
         cd.attachRecapLinkToEligibleDocs();
-        $(links[0]).next().click();
+        const link = $(links[0]).next().click();
         expect(cd.handleRecapLinkClick).toHaveBeenCalled();
         document.getElementsByClassName('recap-inline')[0].remove();
       });

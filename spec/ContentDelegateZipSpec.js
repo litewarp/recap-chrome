@@ -92,7 +92,7 @@ describe('The ContentDelegate class', () => {
     });
 
     afterEach(() => {
-      delete window.chrome;
+      window.chrome = {};
       window.fetch = nativeFetch;
     });
 
@@ -225,7 +225,7 @@ describe('The ContentDelegate class', () => {
         expect(cd.recap.uploadZipFile).toHaveBeenCalled();
       });
 
-      it('redirects the user to the download page and forwards the zip file', function () {
+      it('redirects the user to the download page and forwards the zip file', () => {
         expect(history.pushState).toHaveBeenCalled();
       });
 
