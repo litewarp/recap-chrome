@@ -765,10 +765,10 @@ export class ContentDelegate {
     this.recap.getAvailabilityForDocuments(
       this.pacer_doc_ids,
       this.court,
-      $.proxy(function (api_results) {
+      (api_results) => {
         console.info(
-          `RECAP: Got results from API. Running callback on API results to ` +
-            `attach links and icons where appropriate.`
+          'RECAP: Got results from API. Running callback on API results to ' +
+            'attach links and icons where appropriate.'
         );
         for (let i = 0; i < this.links.length; i++) {
           let pacer_doc_id = $(this.links[i]).data('pacer_doc_id');
@@ -792,12 +792,12 @@ export class ContentDelegate {
           );
           recap_link.append(
             $('<img/>').attr({
-              src: chrome.extension.getURL('assets/images/icon-16.png'),
+              src: chrome.extension.getURL('icon-16.png'),
             })
           );
           recap_link.insertAfter(this.links[i]);
         }
-      }, this)
+      }
     );
   }
 

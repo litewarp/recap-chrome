@@ -3,13 +3,6 @@ import PACER from '../src/pacer';
 import { ContentDelegate } from '../src/content_delegate';
 import { blobToDataURL } from '../src/utils';
 
-console.profile('cause of reload');
-
-window.addEventListener('beforeunload', function () {
-  console.profileEnd('cause of reload');
-  debugger;
-});
-
 describe('The ContentDelegate class', function () {
   // 'tabId' values
   const tabId = 1234;
@@ -1411,23 +1404,7 @@ describe('The ContentDelegate class', function () {
         expect($('.recap-inline').length).toBe(0);
       });
 
-      it('attaches a single link to the one url with recap', function () {
-        spyOn(cd.recap, 'getAvailabilityForDocuments').and.callFake(function (
-          pc,
-          pci,
-          callback
-        ) {
-          callback({
-            results: [{ pacer_doc_id: 1234, filepath_local: 'download/1234' }],
-          });
-        });
-        cd.attachRecapLinkToEligibleDocs();
-        expect($('.recap-inline').length).toBe(1);
-        document.getElementsByClassName('recap-inline')[0].remove();
-      });
-
-      it('attaches a working click handler', function () {
-        spyOn(cd, 'handleRecapLinkClick').and.callFake((window, href) => {});
+      it('attaches a single link to the one url with recap', () => {
         spyOn(cd.recap, 'getAvailabilityForDocuments').and.callFake(
           (pc, pci, callback) => {
             callback({
@@ -1438,7 +1415,29 @@ describe('The ContentDelegate class', function () {
           }
         );
         cd.attachRecapLinkToEligibleDocs();
-        const link = $(links[0]).next().click();
+        expect($('.recap-inline').length).toBe(1);
+        document.getElementsByClassName('recap-inline')[0].remove();
+      });
+
+      it('attaches a working click handler', () => {
+        spyOn(cd, 'handleRecapLinkClick');
+        spyOn(cd.recap, 'getAvailabilityForDocuments').and.callFake(
+          (pc, pci, callback) => {
+            callback({
+              results: [
+                { pacer_doc_id: 1234, filepath_local: 'download/1234' },
+              ],
+            });
+          }
+        );
+        cd.attachRecapLinkToEligibleDocs();
+        const link = document.querySelector('a.recap-inline');
+        // add an event listener to prevent the page from
+        // reloading during testing;
+        link.addEventListener('click', (ev) => {
+          ev.preventDefault();
+        });
+        link.click();
         expect(cd.handleRecapLinkClick).toHaveBeenCalled();
         document.getElementsByClassName('recap-inline')[0].remove();
       });
